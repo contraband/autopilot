@@ -114,4 +114,22 @@ var _ = Describe("ApplicationRepo", func() {
 			Ω(err).Should(MatchError("bad app"))
 		})
 	})
+
+	Describe("ListApplications", func() {
+		It("lists all the applications", func() {
+			err := repo.ListApplications()
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Ω(args).Should(Equal([]string{"apps"}))
+		})
+
+		It("returns errors from the list", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("bad apps"))
+
+			err := repo.ListApplications()
+			Ω(err).Should(MatchError("bad apps"))
+		})
+	})
 })

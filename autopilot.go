@@ -39,6 +39,10 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 
 	fmt.Println()
 	fmt.Println("A new version of your application has successfully been pushed!")
+	fmt.Println()
+
+	err = appRepo.ListApplications()
+	fatalIf(err)
 }
 
 func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
@@ -100,5 +104,10 @@ func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
 	_, err := repo.conn.CliCommand("delete", appName, "-f")
+	return err
+}
+
+func (repo *ApplicationRepo) ListApplications() error {
+	_, err := repo.conn.CliCommand("apps")
 	return err
 }
