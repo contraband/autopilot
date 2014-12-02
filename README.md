@@ -33,8 +33,8 @@ delivery environments.
 
 2. The new application is pushed to `<APP-NAME>` (assuming that the name has
    not been changed in the manifest). It binds to the same routes as the old
-   application and traffic begins to be load-balanced between the two
-   applications.
+   application (due to them being defined in the manifest) and traffic begins to
+   be load-balanced between the two applications.
 
 3. The old application is deleted along with its route mappings. All traffic
    now goes to the new application.
