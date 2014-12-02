@@ -2,10 +2,19 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"os"
 
 	"github.com/cloudfoundry/cli/plugin"
 )
+
+func fatalIf(err error) {
+	if err != nil {
+		fmt.Fprintln(os.Stdout, "error:", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	plugin.Start(&AutopilotPlugin{})
@@ -13,8 +22,23 @@ func main() {
 
 type AutopilotPlugin struct{}
 
-func (AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
-	fmt.Println("what up yo")
+func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
+	appRepo := NewApplicationRepo(cliConnection)
+	appName, manifestPath, appPath := plugin.parseArgs(args)
+
+	venerableAppName := appName + "-venerable"
+
+	err := appRepo.RenameApplication(appName, venerableAppName)
+	fatalIf(err)
+
+	err = appRepo.PushApplication(manifestPath, appPath)
+	fatalIf(err)
+
+	err = appRepo.DeleteApplication(venerableAppName)
+	fatalIf(err)
+
+	fmt.Println()
+	fmt.Println("A new version of your application has successfully been pushed!")
 }
 
 func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
@@ -27,6 +51,19 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 			},
 		},
 	}
+}
+
+func (AutopilotPlugin) parseArgs(args []string) (string, string, string) {
+	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
+	manifestPath := flags.String("f", "", "path to an application manfiest")
+	appPath := flags.String("p", "", "path to application files")
+
+	err := flags.Parse(args[2:])
+	fatalIf(err)
+
+	appName := args[1]
+
+	return appName, *manifestPath, *appPath
 }
 
 var ErrNoManifest = errors.New("a manifest is required to push this application")

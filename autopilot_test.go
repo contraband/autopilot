@@ -115,13 +115,3 @@ var _ = Describe("ApplicationRepo", func() {
 		})
 	})
 })
-
-var _ = Describe("Autopilot", func() {
-	Describe("performing the zero-downtime deploy", func() {
-		It("does the old switcheroo", func() {
-			By("renaming the old application")
-			By("pushing the new application")
-			By("deleting the old application, along with its routes")
-		})
-	})
-})
