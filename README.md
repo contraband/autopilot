@@ -28,7 +28,7 @@ advantage of treating a manifest as the source of truth and will converge the
 state of the system towards that. This makes the plugin ideal for continuous
 delivery environments.
 
-1. The old application is renamed to `<APP-NAME>-old`. It keeps its old route
+1. The old application is renamed to `<APP-NAME>-venerable`. It keeps its old route
    mappings and this change is invisible to users.
 
 2. The new application is pushed to `<APP-NAME>` (assuming that the name has
