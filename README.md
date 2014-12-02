@@ -15,7 +15,7 @@ $ cf install-plugin $GOPATH/bin/autopilot
 
 ```
 $ cf zero-downtime-push application-to-replace \
-    -m path/to/new_manifest.yml \
+    -f path/to/new_manifest.yml \
     -p path/to/new/path
 ```
 
