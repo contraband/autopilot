@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cloudfoundry/cli/plugin"
@@ -26,4 +27,41 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 			},
 		},
 	}
+}
+
+var ErrNoManifest = errors.New("a manifest is required to push this application")
+
+type ApplicationRepo struct {
+	conn plugin.CliConnection
+}
+
+func NewApplicationRepo(conn plugin.CliConnection) *ApplicationRepo {
+	return &ApplicationRepo{
+		conn: conn,
+	}
+}
+
+func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
+	_, err := repo.conn.CliCommand("rename", oldName, newName)
+	return err
+}
+
+func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error {
+	if manifestPath == "" {
+		return ErrNoManifest
+	}
+
+	args := []string{"push", "-f", manifestPath}
+
+	if appPath != "" {
+		args = append(args, "-p", appPath)
+	}
+
+	_, err := repo.conn.CliCommand(args...)
+	return err
+}
+
+func (repo *ApplicationRepo) DeleteApplication(appName string) error {
+	_, err := repo.conn.CliCommand("delete", appName, "-f", "-r")
+	return err
 }

@@ -1,10 +1,15 @@
 package main_test
 
 import (
+	"errors"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/concourse/autopilot"
+
+	"github.com/cloudfoundry/cli/plugin/fakes"
 )
 
 func TestAutopilot(t *testing.T) {
@@ -12,13 +17,111 @@ func TestAutopilot(t *testing.T) {
 	RunSpecs(t, "Autopilot Suite")
 }
 
+var _ = Describe("ApplicationRepo", func() {
+	var (
+		cliConn *fakes.FakeCliConnection
+		repo    *ApplicationRepo
+	)
+
+	BeforeEach(func() {
+		cliConn = &fakes.FakeCliConnection{}
+		repo = NewApplicationRepo(cliConn)
+	})
+
+	Describe("RenameApplication", func() {
+		It("renames the application", func() {
+			err := repo.RenameApplication("old-name", "new-name")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Ω(args).Should(Equal([]string{"rename", "old-name", "new-name"}))
+		})
+
+		It("returns an error if one occurs", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("no app"))
+
+			err := repo.RenameApplication("old-name", "new-name")
+			Ω(err).Should(MatchError("no app"))
+		})
+	})
+
+	Describe("PushApplication", func() {
+		It("pushes an application with both a manifest and a path", func() {
+			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Ω(args).Should(Equal([]string{
+				"push",
+				"-f", "/path/to/a/manifest.yml",
+				"-p", "/path/to/the/app",
+			}))
+		})
+
+		It("pushes an application with only a manifest", func() {
+			err := repo.PushApplication("/path/to/a/manifest.yml", "")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Ω(args).Should(Equal([]string{
+				"push",
+				"-f", "/path/to/a/manifest.yml",
+			}))
+		})
+
+		It("does not push an application with just a path", func() {
+			err := repo.PushApplication("", "/path/to/the/app")
+			Ω(err).Should(MatchError(ErrNoManifest))
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
+		})
+
+		It("does not push an application with no manifest or path", func() {
+			err := repo.PushApplication("", "/path/to/the/app")
+			Ω(err).Should(MatchError(ErrNoManifest))
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
+		})
+
+		It("returns errors from the push", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
+
+			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			Ω(err).Should(MatchError("bad app"))
+		})
+	})
+
+	Describe("DeleteApplication", func() {
+		It("deletes all trace of an application", func() {
+			err := repo.DeleteApplication("app-name")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Ω(args).Should(Equal([]string{
+				"delete", "app-name",
+				"-f", "-r",
+			}))
+		})
+
+		It("returns errors from the delete", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
+
+			err := repo.DeleteApplication("app-name")
+			Ω(err).Should(MatchError("bad app"))
+		})
+	})
+})
+
 var _ = Describe("Autopilot", func() {
 	Describe("performing the zero-downtime deploy", func() {
 		It("does the old switcheroo", func() {
 			By("renaming the old application")
 			By("pushing the new application")
-			By("unmapping the routes from the old application")
-			By("deleting the old application")
+			By("deleting the old application, along with its routes")
 		})
 	})
 })
