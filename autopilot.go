@@ -99,6 +99,6 @@ func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error
 }
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
-	_, err := repo.conn.CliCommand("delete", appName, "-f", "-r")
+	_, err := repo.conn.CliCommand("delete", appName, "-f")
 	return err
 }

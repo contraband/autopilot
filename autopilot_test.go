@@ -103,7 +103,7 @@ var _ = Describe("ApplicationRepo", func() {
 			args := cliConn.CliCommandArgsForCall(0)
 			Ω(args).Should(Equal([]string{
 				"delete", "app-name",
-				"-f", "-r",
+				"-f",
 			}))
 		})
 
