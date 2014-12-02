@@ -36,7 +36,7 @@ delivery environments.
    application and traffic begins to be load-balanced between the two
    applications.
 
-3. The old application is deleted along with its routes. All traffic now goes
-   to the new application.
+3. The old application is deleted along with its route mappings. All traffic
+   now goes to the new application.
 
 [indiana-jones]: https://www.youtube.com/watch?v=0gU35Tgtlmg
