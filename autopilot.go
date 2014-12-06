@@ -47,7 +47,7 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 
 func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name: "Autopilot",
+		Name: "autopilot",
 		Commands: []plugin.Command{
 			{
 				Name:     "zero-downtime-push",
