@@ -16,12 +16,26 @@ type CliConnection interface {
 	CliCommand(args ...string) ([]string, error)
 }
 
+type VersionType struct {
+	Major int
+	Minor int
+	Build int
+}
+
 type PluginMetadata struct {
 	Name     string
+	Version  VersionType
 	Commands []Command
 }
 
+type Usage struct {
+	Usage   string
+	Options map[string]string
+}
+
 type Command struct {
-	Name     string
-	HelpText string
+	Name         string
+	Alias        string
+	HelpText     string
+	UsageDetails Usage //Detail usage to be displayed in `cf help <cmd>`
 }
