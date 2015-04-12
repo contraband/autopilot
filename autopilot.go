@@ -1,8 +1,6 @@
 package main
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"os"
 
@@ -24,15 +22,23 @@ type AutopilotPlugin struct{}
 
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath := plugin.parseArgs(args)
+
+	appName := os.Args[3]
 
 	venerableAppName := appName + "-venerable"
 
 	err := appRepo.RenameApplication(appName, venerableAppName)
 	fatalIf(err)
 
-	err = appRepo.PushApplication(manifestPath, appPath)
-	fatalIf(err)
+	err = appRepo.PushApplication(os.Args[3:])
+	if err != nil {
+		fmt.Fprintln(os.Stdout, "error:", err)
+		err = appRepo.DeleteApplication(appName)
+		fatalIf(err)
+		err := appRepo.RenameApplication(venerableAppName, appName)
+		fatalIf(err)
+		os.Exit(1)
+	}
 
 	err = appRepo.DeleteApplication(venerableAppName)
 	fatalIf(err)
@@ -57,21 +63,6 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func (AutopilotPlugin) parseArgs(args []string) (string, string, string) {
-	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
-	manifestPath := flags.String("f", "", "path to an application manfiest")
-	appPath := flags.String("p", "", "path to application files")
-
-	err := flags.Parse(args[2:])
-	fatalIf(err)
-
-	appName := args[1]
-
-	return appName, *manifestPath, *appPath
-}
-
-var ErrNoManifest = errors.New("a manifest is required to push this application")
-
 type ApplicationRepo struct {
 	conn plugin.CliConnection
 }
@@ -87,18 +78,11 @@ func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
 	return err
 }
 
-func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error {
-	if manifestPath == "" {
-		return ErrNoManifest
-	}
+func (repo *ApplicationRepo) PushApplication(args []string) error {
+	pushArgs := args
+	pushArgs = append([]string{"push"}, pushArgs...)
 
-	args := []string{"push", "-f", manifestPath}
-
-	if appPath != "" {
-		args = append(args, "-p", appPath)
-	}
-
-	_, err := repo.conn.CliCommand(args...)
+	_, err := repo.conn.CliCommand(pushArgs...)
 	return err
 }
 

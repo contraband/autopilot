@@ -48,7 +48,7 @@ var _ = Describe("ApplicationRepo", func() {
 
 	Describe("PushApplication", func() {
 		It("pushes an application with both a manifest and a path", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			err := repo.PushApplication("-f /path/to/a/manifest.yml -p /path/to/the/app")
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
@@ -61,7 +61,7 @@ var _ = Describe("ApplicationRepo", func() {
 		})
 
 		It("pushes an application with only a manifest", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "")
+			err := repo.PushApplication("-f /path/to/a/manifest.yml")
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
@@ -72,18 +72,11 @@ var _ = Describe("ApplicationRepo", func() {
 			}))
 		})
 
-		It("does not push an application with just a path", func() {
-			err := repo.PushApplication("", "/path/to/the/app")
+		It("pushes an application with no manifest or path", func() {
+			err := repo.PushApplication("")
 			Ω(err).Should(MatchError(ErrNoManifest))
 
-			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
-		})
-
-		It("does not push an application with no manifest or path", func() {
-			err := repo.PushApplication("", "/path/to/the/app")
-			Ω(err).Should(MatchError(ErrNoManifest))
-
-			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
+			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
 		})
 
 		It("returns errors from the push", func() {
