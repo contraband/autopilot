@@ -34,9 +34,13 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	if err != nil {
 		fmt.Fprintln(os.Stdout, "error:", err)
 		err = appRepo.DeleteApplication(appName)
-		fatalIf(err)
+		if err != nil {
+			fmt.Fprintln(os.Stdout, "error:", err)
+		}
 		err := appRepo.RenameApplication(venerableAppName, appName)
-		fatalIf(err)
+		if err != nil {
+			fmt.Fprintln(os.Stdout, "error:", err)
+		}
 		os.Exit(1)
 	}
 
