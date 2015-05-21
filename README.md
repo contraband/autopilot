@@ -22,7 +22,7 @@ $ cf zero-downtime-push application-to-replace \
 ## warning
 
 Your application manifest **must** be up to date or the new application that
-is created will not resemble the applciation that it is replacing.
+is created will not resemble the application that it is replacing.
 
 ## method
 
