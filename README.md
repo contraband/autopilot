@@ -19,6 +19,11 @@ $ cf zero-downtime-push application-to-replace \
     -p path/to/new/path
 ```
 
+## warning
+
+Your application manifest **must** be up to date or the new application that
+is created will not resemble the applciation that it is replacing.
+
 ## method
 
 *Autopilot* takes a different approach to other zero-downtime plugins. It
