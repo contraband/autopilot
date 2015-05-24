@@ -24,11 +24,12 @@ type AutopilotPlugin struct{}
 
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath := plugin.parseArgs(args)
+	appName, manifestPath, appPath, err := ParseArgs(args)
+	fatalIf(err)
 
 	venerableAppName := appName + "-venerable"
 
-	err := appRepo.RenameApplication(appName, venerableAppName)
+	err = appRepo.RenameApplication(appName, venerableAppName)
 	fatalIf(err)
 
 	err = appRepo.PushApplication(manifestPath, appPath)
@@ -57,17 +58,23 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func (AutopilotPlugin) parseArgs(args []string) (string, string, string) {
+func ParseArgs(args []string) (string, string, string, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manfiest")
 	appPath := flags.String("p", "", "path to application files")
 
 	err := flags.Parse(args[2:])
-	fatalIf(err)
+	if err != nil {
+		return "", "", "", err
+	}
 
 	appName := args[1]
 
-	return appName, *manifestPath, *appPath
+	if *manifestPath == "" {
+		return "", "", "", ErrNoManifest
+	}
+
+	return appName, *manifestPath, *appPath, nil
 }
 
 var ErrNoManifest = errors.New("a manifest is required to push this application")
@@ -88,10 +95,6 @@ func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
 }
 
 func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error {
-	if manifestPath == "" {
-		return ErrNoManifest
-	}
-
 	args := []string{"push", "-f", manifestPath}
 
 	if appPath != "" {

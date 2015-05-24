@@ -17,6 +17,35 @@ func TestAutopilot(t *testing.T) {
 	RunSpecs(t, "Autopilot Suite")
 }
 
+var _ = Describe("Flag Parsing", func() {
+	It("parses a complete set of args", func() {
+		appName, manifestPath, appPath, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"appname",
+				"-f", "manifest-path",
+				"-p", "app-path",
+			},
+		)
+		Ω(err).ShouldNot(HaveOccurred())
+
+		Ω(appName).Should(Equal("appname"))
+		Ω(manifestPath).Should(Equal("manifest-path"))
+		Ω(appPath).Should(Equal("app-path"))
+	})
+
+	It("requires a manifest", func() {
+		_, _, _, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"appname",
+				"-p", "app-path",
+			},
+		)
+		Ω(err).Should(MatchError(ErrNoManifest))
+	})
+})
+
 var _ = Describe("ApplicationRepo", func() {
 	var (
 		cliConn *fakes.FakeCliConnection
@@ -70,20 +99,6 @@ var _ = Describe("ApplicationRepo", func() {
 				"push",
 				"-f", "/path/to/a/manifest.yml",
 			}))
-		})
-
-		It("does not push an application with just a path", func() {
-			err := repo.PushApplication("", "/path/to/the/app")
-			Ω(err).Should(MatchError(ErrNoManifest))
-
-			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
-		})
-
-		It("does not push an application with no manifest or path", func() {
-			err := repo.PushApplication("", "/path/to/the/app")
-			Ω(err).Should(MatchError(ErrNoManifest))
-
-			Ω(cliConn.CliCommandCallCount()).Should(Equal(0))
 		})
 
 		It("returns errors from the push", func() {
