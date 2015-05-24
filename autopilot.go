@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry/cli/plugin"
+	"github.com/concourse/autopilot/rewind"
 )
 
 func fatalIf(err error) {
@@ -29,13 +30,36 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 
 	venerableAppName := appName + "-venerable"
 
-	err = appRepo.RenameApplication(appName, venerableAppName)
-	fatalIf(err)
+	actions := rewind.Actions{
+		Actions: []rewind.Action{
+			// rename
+			{
+				Forward: func() error {
+					return appRepo.RenameApplication(appName, venerableAppName)
+				},
+			},
 
-	err = appRepo.PushApplication(manifestPath, appPath)
-	fatalIf(err)
+			// push
+			{
+				Forward: func() error {
+					return appRepo.PushApplication(manifestPath, appPath)
+				},
+				ReversePrevious: func() error {
+					return appRepo.RenameApplication(venerableAppName, appName)
+				},
+			},
 
-	err = appRepo.DeleteApplication(venerableAppName)
+			// delete
+			{
+				Forward: func() error {
+					return appRepo.DeleteApplication(venerableAppName)
+				},
+			},
+		},
+		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
+	}
+
+	err = actions.Execute()
 	fatalIf(err)
 
 	fmt.Println()
