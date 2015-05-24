@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 
 	. "github.com/onsi/ginkgo"
@@ -220,6 +221,18 @@ var _ = Describe("TestServer", func() {
 				It("should also be possible to verify the rawQuery", func() {
 					s.SetHandler(0, VerifyRequest("GET", "/foo", "baz=bar"))
 					resp, err = http.Get(s.URL() + "/foo?baz=bar")
+					Ω(err).ShouldNot(HaveOccurred())
+				})
+
+				It("should match irregardless of query parameter ordering", func() {
+					s.SetHandler(0, VerifyRequest("GET", "/foo", "type=get&name=money"))
+					u, _ := url.Parse(s.URL() + "/foo")
+					u.RawQuery = url.Values{
+						"type": []string{"get"},
+						"name": []string{"money"},
+					}.Encode()
+
+					resp, err = http.Get(u.String())
 					Ω(err).ShouldNot(HaveOccurred())
 				})
 			})
@@ -542,49 +555,159 @@ var _ = Describe("TestServer", func() {
 		})
 
 		Describe("RespondWithJSON", func() {
-			BeforeEach(func() {
-				s.AppendHandlers(CombineHandlers(
-					VerifyRequest("POST", "/foo"),
-					RespondWithJSONEncoded(http.StatusCreated, []int{1, 2, 3}),
-				))
+			Context("when no optional headers are set", func() {
+				BeforeEach(func() {
+					s.AppendHandlers(CombineHandlers(
+						VerifyRequest("POST", "/foo"),
+						RespondWithJSONEncoded(http.StatusCreated, []int{1, 2, 3}),
+					))
+				})
+
+				It("should return the response", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.StatusCode).Should(Equal(http.StatusCreated))
+
+					body, err := ioutil.ReadAll(resp.Body)
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(body).Should(MatchJSON("[1,2,3]"))
+				})
+
+				It("should set the Content-Type header to application/json", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Content-Type"]).Should(Equal([]string{"application/json"}))
+				})
 			})
 
-			It("should return the response", func() {
-				resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
-				Ω(err).ShouldNot(HaveOccurred())
+			Context("when optional headers are set", func() {
+				var headers http.Header
+				BeforeEach(func() {
+					headers = http.Header{"Stuff": []string{"things"}}
+				})
 
-				Ω(resp.StatusCode).Should(Equal(http.StatusCreated))
+				JustBeforeEach(func() {
+					s.AppendHandlers(CombineHandlers(
+						VerifyRequest("POST", "/foo"),
+						RespondWithJSONEncoded(http.StatusCreated, []int{1, 2, 3}, headers),
+					))
+				})
 
-				body, err := ioutil.ReadAll(resp.Body)
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(body).Should(MatchJSON("[1,2,3]"))
+				It("should preserve those headers", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Stuff"]).Should(Equal([]string{"things"}))
+				})
+
+				It("should set the Content-Type header to application/json", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Content-Type"]).Should(Equal([]string{"application/json"}))
+				})
+
+				Context("when setting the Content-Type explicitly", func() {
+					BeforeEach(func() {
+						headers["Content-Type"] = []string{"not-json"}
+					})
+
+					It("should use the Content-Type header that was explicitly set", func() {
+						resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+						Ω(err).ShouldNot(HaveOccurred())
+
+						Ω(resp.Header["Content-Type"]).Should(Equal([]string{"not-json"}))
+					})
+				})
 			})
 		})
 
 		Describe("RespondWithJSONPtr", func() {
-			var code int
-			var object interface{}
-			BeforeEach(func() {
-				code = http.StatusOK
-				object = []int{1, 2, 3}
+			type testObject struct {
+				Key   string
+				Value string
+			}
 
-				s.AppendHandlers(CombineHandlers(
-					VerifyRequest("POST", "/foo"),
-					RespondWithJSONEncodedPtr(&code, &object),
-				))
+			var code int
+			var object testObject
+
+			Context("when no optional headers are set", func() {
+				BeforeEach(func() {
+					code = http.StatusOK
+					object = testObject{}
+					s.AppendHandlers(CombineHandlers(
+						VerifyRequest("POST", "/foo"),
+						RespondWithJSONEncodedPtr(&code, &object),
+					))
+				})
+
+				It("should return the response", func() {
+					code = http.StatusCreated
+					object = testObject{
+						Key:   "Jim",
+						Value: "Codes",
+					}
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.StatusCode).Should(Equal(http.StatusCreated))
+
+					body, err := ioutil.ReadAll(resp.Body)
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(body).Should(MatchJSON(`{"Key": "Jim", "Value": "Codes"}`))
+				})
+
+				It("should set the Content-Type header to application/json", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Content-Type"]).Should(Equal([]string{"application/json"}))
+				})
 			})
 
-			It("should return the response", func() {
-				code = http.StatusCreated
-				object = []int{4, 5, 6}
-				resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
-				Ω(err).ShouldNot(HaveOccurred())
+			Context("when optional headers are set", func() {
+				var headers http.Header
+				BeforeEach(func() {
+					headers = http.Header{"Stuff": []string{"things"}}
+				})
 
-				Ω(resp.StatusCode).Should(Equal(http.StatusCreated))
+				JustBeforeEach(func() {
+					code = http.StatusOK
+					object = testObject{}
+					s.AppendHandlers(CombineHandlers(
+						VerifyRequest("POST", "/foo"),
+						RespondWithJSONEncodedPtr(&code, &object, headers),
+					))
+				})
 
-				body, err := ioutil.ReadAll(resp.Body)
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(body).Should(MatchJSON("[4,5,6]"))
+				It("should preserve those headers", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Stuff"]).Should(Equal([]string{"things"}))
+				})
+
+				It("should set the Content-Type header to application/json", func() {
+					resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+					Ω(err).ShouldNot(HaveOccurred())
+
+					Ω(resp.Header["Content-Type"]).Should(Equal([]string{"application/json"}))
+				})
+
+				Context("when setting the Content-Type explicitly", func() {
+					BeforeEach(func() {
+						headers["Content-Type"] = []string{"not-json"}
+					})
+
+					It("should use the Content-Type header that was explicitly set", func() {
+						resp, err = http.Post(s.URL()+"/foo", "application/json", nil)
+						Ω(err).ShouldNot(HaveOccurred())
+
+						Ω(resp.Header["Content-Type"]).Should(Equal([]string{"not-json"}))
+					})
+				})
 			})
 		})
 	})

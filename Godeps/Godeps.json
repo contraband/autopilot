@@ -7,18 +7,18 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/cloudfoundry/cli/plugin",
-			"Comment": "v6.10.0-30-gba2a20f",
-			"Rev": "ba2a20fb1e0e327e672513970a13efb67ec1b1ae"
+			"Comment": "v6.11.3-7-gd364b91",
+			"Rev": "d364b91144c3332057bc8c78199bfd09fde145d3"
 		},
 		{
 			"ImportPath": "github.com/onsi/ginkgo",
-			"Comment": "v1.1.0-33-g17ea479",
-			"Rev": "17ea479729ee427265ac1e913443018350946ddf"
+			"Comment": "v1.2.0-beta-9-gfbb6632",
+			"Rev": "fbb663242655b700c623e9629d7781db98957501"
 		},
 		{
 			"ImportPath": "github.com/onsi/gomega",
-			"Comment": "v1.0-28-g8adf9e1",
-			"Rev": "8adf9e1730c55cdc590de7d49766cb2acc88d8f2"
+			"Comment": "v1.0-48-g766f404",
+			"Rev": "766f4042b942146e90594d145c5071fa92c0aa9a"
 		}
 	]
 }
