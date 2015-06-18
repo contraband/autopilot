@@ -6,9 +6,16 @@
 
 ## installation
 
+**On *nix**
 ```
 $ go get github.com/concourse/autopilot
 $ cf install-plugin $GOPATH/bin/autopilot
+```
+
+**On Windows**
+```
+$ go get github.com/concourse/autopilot
+$ cf install-plugin $env:GOPATH/bin/autopilot.exe
 ```
 
 ## usage
