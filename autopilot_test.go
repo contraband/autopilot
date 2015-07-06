@@ -19,7 +19,7 @@ func TestAutopilot(t *testing.T) {
 
 var _ = Describe("Flag Parsing", func() {
 	It("parses a complete set of args", func() {
-		appName, manifestPath, appPath, err := ParseArgs(
+		appName, args := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
@@ -27,22 +27,13 @@ var _ = Describe("Flag Parsing", func() {
 				"-p", "app-path",
 			},
 		)
-		Ω(err).ShouldNot(HaveOccurred())
-
 		Ω(appName).Should(Equal("appname"))
-		Ω(manifestPath).Should(Equal("manifest-path"))
-		Ω(appPath).Should(Equal("app-path"))
-	})
-
-	It("requires a manifest", func() {
-		_, _, _, err := ParseArgs(
-			[]string{
-				"zero-downtime-push",
-				"appname",
-				"-p", "app-path",
-			},
-		)
-		Ω(err).Should(MatchError(ErrNoManifest))
+		Ω(args).Should(Equal([]string{
+			"push",
+			"appname",
+			"-f", "manifest-path",
+			"-p", "app-path",
+		}))
 	})
 })
 
@@ -77,26 +68,28 @@ var _ = Describe("ApplicationRepo", func() {
 
 	Describe("PushApplication", func() {
 		It("pushes an application with both a manifest and a path", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			err := repo.PushApplication([]string{"push", "myapp", "-f", "/path/to/a/manifest.yml", "-p", "/path/to/the/app"})
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Ω(args).Should(Equal([]string{
 				"push",
+				"myapp",
 				"-f", "/path/to/a/manifest.yml",
 				"-p", "/path/to/the/app",
 			}))
 		})
 
 		It("pushes an application with only a manifest", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "")
+			err := repo.PushApplication([]string{"push", "myapp", "-f", "/path/to/a/manifest.yml"})
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(cliConn.CliCommandCallCount()).Should(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Ω(args).Should(Equal([]string{
 				"push",
+				"myapp",
 				"-f", "/path/to/a/manifest.yml",
 			}))
 		})
@@ -104,7 +97,7 @@ var _ = Describe("ApplicationRepo", func() {
 		It("returns errors from the push", func() {
 			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
 
-			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			err := repo.PushApplication([]string{"push", "myapp", "-f", "/path/to/a/manifest.yml", "-p", "/path/to/the/app"})
 			Ω(err).Should(MatchError("bad app"))
 		})
 	})

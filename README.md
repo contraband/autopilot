@@ -21,9 +21,34 @@ $ cf install-plugin $env:GOPATH/bin/autopilot.exe
 ## usage
 
 ```
-$ cf zero-downtime-push application-to-replace \
-    -f path/to/new_manifest.yml \
-    -p path/to/new/path
+USAGE:
+   Push a single app (with or without a manifest):
+   cf zero-downtime-push APP [-b BUILDPACK_NAME] [-c COMMAND] [-d DOMAIN] [-f MANIFEST_PATH]
+   [-i NUM_INSTANCES] [-k DISK] [-m MEMORY] [-n HOST] [-p PATH] [-s STACK] [-t TIMEOUT]
+   [--no-hostname] [--no-manifest] [--no-route] [--no-start]
+
+   Push multiple apps with a manifest:
+   cf zero-downtime-push [-f MANIFEST_PATH]
+
+
+OPTIONS:
+   -b 			Custom buildpack by name (e.g. my-buildpack) or GIT URL (e.g. https://github.com/heroku/heroku-buildpack-play.git)
+   -c 			Startup command, set to null to reset to default start command
+   -d 			Domain (e.g. example.com)
+   -f 			Path to manifest
+   -i 			Number of instances
+   -k 			Disk limit (e.g. 256M, 1024M, 1G)
+   -m 			Memory limit (e.g. 256M, 1024M, 1G)
+   -n 			Hostname (e.g. my-subdomain)
+   -p 			Path to app directory or file
+   -s 			Stack to use (a stack is a pre-built file system, including an operating system, that can run apps)
+   -t 			Maximum time (in seconds) for CLI to wait for application start, other server side timeouts may apply
+   --no-hostname	Map the root domain to this app
+   --no-manifest	Ignore manifest file
+   --no-route		Do not map a route to this app
+   --no-start		Do not start an app after pushing
+   --random-route	Create a random route for this app
+
 ```
 
 ## warning
