@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 
@@ -24,10 +23,9 @@ func main() {
 type AutopilotPlugin struct{}
 
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
+	var err error
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, err := ParseArgs(args)
-	fatalIf(err)
-
+	appName, argList := ParseArgs(args)
 	venerableAppName := appName + "-venerable"
 
 	actions := rewind.Actions{
@@ -42,7 +40,7 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 			// push
 			{
 				Forward: func() error {
-					return appRepo.PushApplication(manifestPath, appPath)
+					return appRepo.PushApplication(argList)
 				},
 				ReversePrevious: func() error {
 					return appRepo.RenameApplication(venerableAppName, appName)
@@ -82,23 +80,10 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func ParseArgs(args []string) (string, string, string, error) {
-	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
-	manifestPath := flags.String("f", "", "path to an application manfiest")
-	appPath := flags.String("p", "", "path to application files")
-
-	err := flags.Parse(args[2:])
-	if err != nil {
-		return "", "", "", err
-	}
-
+func ParseArgs(args []string) (string, []string) {
+	args[0] = "push"
 	appName := args[1]
-
-	if *manifestPath == "" {
-		return "", "", "", ErrNoManifest
-	}
-
-	return appName, *manifestPath, *appPath, nil
+	return appName, args
 }
 
 var ErrNoManifest = errors.New("a manifest is required to push this application")
@@ -118,13 +103,7 @@ func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
 	return err
 }
 
-func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error {
-	args := []string{"push", "-f", manifestPath}
-
-	if appPath != "" {
-		args = append(args, "-p", appPath)
-	}
-
+func (repo *ApplicationRepo) PushApplication(args []string) error {
 	_, err := repo.conn.CliCommand(args...)
 	return err
 }
