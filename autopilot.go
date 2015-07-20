@@ -84,7 +84,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 
 func ParseArgs(args []string) (string, string, string, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
-	manifestPath := flags.String("f", "", "path to an application manfiest")
+	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
 
 	err := flags.Parse(args[2:])
