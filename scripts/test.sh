@@ -3,9 +3,6 @@
 
 set -e
 
-export GOROOT=/usr/src/go
-export PATH=$GOROOT/bin:$PATH
-
 export GOPATH=$PWD/gopath
 export PATH=$GOPATH/bin:$PATH
 
