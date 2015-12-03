@@ -79,7 +79,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 				HelpText: "Perform a zero-downtime push of an application over the top of an old one",
 				UsageDetails: plugin.Usage { 
 					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
-        },
+				},
 			},
 		},
 	}
