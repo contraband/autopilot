@@ -75,6 +75,74 @@ var _ = Describe("ApplicationRepo", func() {
 		})
 	})
 
+	Describe("DoesAppExist", func() {
+
+		It("returns an error if the cli returns an error", func() {
+			cliConn.CliCommandWithoutTerminalOutputReturns([]string{}, errors.New("you shall not curl"))
+			_, err := repo.DoesAppExist("app-name")
+
+			Ω(err).Should(MatchError("you shall not curl"))
+		})
+
+		It("returns an error if the cli response is invalid JSON", func() {
+			response := []string{
+				"}notjson{",
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			_, err := repo.DoesAppExist("app-name")
+
+			Ω(err).Should(HaveOccurred())
+		})
+
+		It("returns an error if the cli response doesn't contain total_results", func() {
+			response := []string{
+				`{"brutal_results":2}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			_, err := repo.DoesAppExist("app-name")
+
+			Ω(err).Should(MatchError("Missing total_results from api response"))
+		})
+
+		It("returns an error if the cli response contains a non-number total_results", func() {
+			response := []string{
+				`{"total_results":"sandwich"}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			_, err := repo.DoesAppExist("app-name")
+
+			Ω(err).Should(MatchError("total_results didn't have a number sandwich"))
+		})
+
+		It("returns true if the app exists", func() {
+			response := []string{
+				`{"total_results":1}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			result, err := repo.DoesAppExist("app-name")
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(result).Should(BeTrue())
+		})
+
+		It("returns false if the app does not exist", func() {
+			response := []string{
+				`{"total_results":0}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			result, err := repo.DoesAppExist("app-name")
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(result).Should(BeFalse())
+		})
+
+	})
+
 	Describe("PushApplication", func() {
 		It("pushes an application with both a manifest and a path", func() {
 			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")

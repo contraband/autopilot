@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cloudfoundry/cli/plugin"
 	"github.com/concourse/autopilot/rewind"
@@ -23,39 +25,65 @@ func main() {
 
 type AutopilotPlugin struct{}
 
+func venerableAppName(appName string) string {
+	return fmt.Sprintf("%s-venerable", appName)
+}
+
+func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string) []rewind.Action {
+	return []rewind.Action{
+		// rename
+		{
+			Forward: func() error {
+				return appRepo.RenameApplication(appName, venerableAppName(appName))
+			},
+		},
+		// push
+		{
+			Forward: func() error {
+				return appRepo.PushApplication(manifestPath, appPath)
+			},
+			ReversePrevious: func() error {
+				return appRepo.RenameApplication(venerableAppName(appName), appName)
+			},
+		},
+		// delete
+		{
+			Forward: func() error {
+				return appRepo.DeleteApplication(venerableAppName(appName))
+			},
+		},
+	}
+}
+
+func getActionsForNewApp(appRepo *ApplicationRepo, manifestPath, appPath string) []rewind.Action {
+	return []rewind.Action{
+		// push
+		{
+			Forward: func() error {
+				return appRepo.PushApplication(manifestPath, appPath)
+			},
+		},
+	}
+}
+
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	appRepo := NewApplicationRepo(cliConnection)
 	appName, manifestPath, appPath, err := ParseArgs(args)
 	fatalIf(err)
 
-	venerableAppName := appName + "-venerable"
+	appExists, err := appRepo.DoesAppExist(appName)
+	fatalIf(err)
+
+	var actionList []rewind.Action
+
+	if appExists {
+		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath)
+	} else {
+		actionList = getActionsForNewApp(appRepo, manifestPath, appPath)
+	}
 
 	actions := rewind.Actions{
-		Actions: []rewind.Action{
-			// rename
-			{
-				Forward: func() error {
-					return appRepo.RenameApplication(appName, venerableAppName)
-				},
-			},
-
-			// push
-			{
-				Forward: func() error {
-					return appRepo.PushApplication(manifestPath, appPath)
-				},
-				ReversePrevious: func() error {
-					return appRepo.RenameApplication(venerableAppName, appName)
-				},
-			},
-
-			// delete
-			{
-				Forward: func() error {
-					return appRepo.DeleteApplication(venerableAppName)
-				},
-			},
-		},
+		Actions:              actionList,
 		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
 	}
 
@@ -77,7 +105,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 			{
 				Name:     "zero-downtime-push",
 				HelpText: "Perform a zero-downtime push of an application over the top of an old one",
-				UsageDetails: plugin.Usage { 
+				UsageDetails: plugin.Usage{
 					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
 				},
 			},
@@ -140,4 +168,36 @@ func (repo *ApplicationRepo) DeleteApplication(appName string) error {
 func (repo *ApplicationRepo) ListApplications() error {
 	_, err := repo.conn.CliCommand("apps")
 	return err
+}
+
+func (repo *ApplicationRepo) DoesAppExist(appName string) (bool, error) {
+	path := fmt.Sprintf(`v2/apps?q=name:%s`, appName)
+	result, err := repo.conn.CliCommandWithoutTerminalOutput("curl", path)
+
+	if err != nil {
+		return false, err
+	}
+
+	jsonResp := strings.Join(result, "")
+
+	output := make(map[string]interface{})
+	err = json.Unmarshal([]byte(jsonResp), &output)
+
+	if err != nil {
+		return false, err
+	}
+
+	totalResults, ok := output["total_results"]
+
+	if !ok {
+		return false, errors.New("Missing total_results from api response")
+	}
+
+	count, ok := totalResults.(float64)
+
+	if !ok {
+		return false, fmt.Errorf("total_results didn't have a number %v", totalResults)
+	}
+
+	return count == 1, nil
 }
