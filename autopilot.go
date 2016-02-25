@@ -43,6 +43,10 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 				return appRepo.PushApplication(manifestPath, appPath)
 			},
 			ReversePrevious: func() error {
+				// If the app cannot start we'll have a lingering application
+				// We delete this application so that the rename can succeed
+				appRepo.DeleteApplication(appName)
+
 				return appRepo.RenameApplication(venerableAppName(appName), appName)
 			},
 		},
