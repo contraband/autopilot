@@ -1,13 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Jeffail/gabs"
 	"github.com/cloudfoundry/cli/plugin"
 	"github.com/concourse/autopilot/rewind"
 )
@@ -186,27 +186,28 @@ func (repo *ApplicationRepo) DoesAppExist(appName string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	singleJSONResult := strings.Join(result, "")
 
-	jsonResp := strings.Join(result, "")
-
-	output := make(map[string]interface{})
-	err = json.Unmarshal([]byte(jsonResp), &output)
-
+	// Parse the JSON
+	jsonResp, err := gabs.ParseJSON([]byte(singleJSONResult))
 	if err != nil {
 		return false, err
 	}
 
-	totalResults, ok := output["total_results"]
-
-	if !ok {
-		return false, errors.New("Missing total_results from api response")
+	// Get the space
+	space, err := repo.conn.GetCurrentSpace()
+	if err != nil {
+		return false, err
 	}
 
-	count, ok := totalResults.(float64)
-
-	if !ok {
-		return false, fmt.Errorf("total_results didn't have a number %v", totalResults)
+	// Keep track of the number of apps in the space.
+	var appsInSpace int
+	children, _ := jsonResp.Search("resources").Children()
+	for _, child := range children {
+		// entity.space_guid will print: "space-guid" (with quotes)
+		if child.Path("entity.space_guid").String() == "\""+space.Guid+"\"" {
+			appsInSpace++
+		}
 	}
-
-	return count == 1, nil
+	return appsInSpace == 1, nil
 }
