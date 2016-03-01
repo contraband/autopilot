@@ -6,6 +6,10 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/Jeffail/gabs",
+			"Rev": "1ad8a462121027c511ab337b98028029352ca356"
+		},
+		{
 			"ImportPath": "github.com/cloudfoundry/cli/plugin",
 			"Comment": "v6.11.3-7-gd364b91",
 			"Rev": "d364b91144c3332057bc8c78199bfd09fde145d3"

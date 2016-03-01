@@ -10,6 +10,7 @@ import (
 	. "github.com/concourse/autopilot"
 
 	"github.com/cloudfoundry/cli/plugin/fakes"
+	"github.com/cloudfoundry/cli/plugin/models"
 )
 
 func TestAutopilot(t *testing.T) {
@@ -95,43 +96,140 @@ var _ = Describe("ApplicationRepo", func() {
 			Ω(err).Should(HaveOccurred())
 		})
 
-		It("returns an error if the cli response doesn't contain total_results", func() {
+		It("returns no error and false if the cli response doesn't contain total_results", func() {
 			response := []string{
 				`{"brutal_results":2}`,
 			}
 
 			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
-			_, err := repo.DoesAppExist("app-name")
+			exist, err := repo.DoesAppExist("app-name")
 
-			Ω(err).Should(MatchError("Missing total_results from api response"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(exist).Should(Equal(false))
 		})
 
-		It("returns an error if the cli response contains a non-number total_results", func() {
+		It("returns no error and false if the cli response contains a non-number total_results", func() {
 			response := []string{
 				`{"total_results":"sandwich"}`,
 			}
 
 			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
-			_, err := repo.DoesAppExist("app-name")
+			exist, err := repo.DoesAppExist("app-name")
 
-			Ω(err).Should(MatchError("total_results didn't have a number sandwich"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(exist).Should(Equal(false))
 		})
 
-		It("returns true if the app exists", func() {
+		It("returns true if the app exists with only one space guid", func() {
 			response := []string{
-				`{"total_results":1}`,
+				`{
+					"total_results":1,
+					"resources": [
+						{
+							"entity": {
+								"space_guid": "space-guid"
+							}
+						}
+					]
+				}`,
 			}
 
 			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(plugin_models.Space{plugin_models.SpaceFields{"space-guid", "space-guid"}}, nil)
 			result, err := repo.DoesAppExist("app-name")
 
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(result).Should(BeTrue())
 		})
 
+		It("returns true if two apps exists with different space guids and one is the app's space-guid", func() {
+			response := []string{
+				`{
+					"total_results":2,
+					"resources": [
+						{
+							"entity": {
+								"space_guid": "space-guid-1"
+							}
+						},
+						{
+							"entity": {
+								"space_guid": "space-guid-2"
+							}
+						}
+					]
+				}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(plugin_models.Space{plugin_models.SpaceFields{"space-guid-1", "space-guid-name"}}, nil)
+			result, err := repo.DoesAppExist("app-name")
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(result).Should(BeTrue())
+		})
+
+		It("returns false if two apps exists with different space guids that aren't the app's space", func() {
+			response := []string{
+				`{
+					"total_results":2,
+					"resources": [
+						{
+							"entity": {
+								"space_guid": "space-guid-1"
+							}
+						},
+						{
+							"entity": {
+								"space_guid": "space-guid-2"
+							}
+						}
+					]
+				}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(plugin_models.Space{plugin_models.SpaceFields{"space-guid", "space-guid"}}, nil)
+			result, err := repo.DoesAppExist("app-name")
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(result).Should(BeFalse())
+		})
+
+		It("returns false if two apps exists with the same space guid", func() {
+			response := []string{
+				`{
+					"total_results":2,
+					"resources": [
+						{
+							"entity": {
+								"space_guid": "space-guid"
+							}
+						},
+						{
+							"entity": {
+								"space_guid": "space-guid"
+							}
+						}
+					]
+				}`,
+			}
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(plugin_models.Space{plugin_models.SpaceFields{"space-guid", "space-guid"}}, nil)
+			result, err := repo.DoesAppExist("app-name")
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(result).Should(BeFalse())
+		})
+
 		It("returns false if the app does not exist", func() {
 			response := []string{
-				`{"total_results":0}`,
+				`{
+					"total_results":0,
+					"resources": [
+					]
+				}`,
 			}
 
 			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
