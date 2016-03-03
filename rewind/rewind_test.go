@@ -32,10 +32,10 @@ var _ = Describe("Rewind", func() {
 		}
 
 		err := actions.Execute()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
-		Ω(firstRun).Should(BeTrue())
-		Ω(secondRun).Should(BeTrue())
+		Expect(firstRun).To(BeTrue())
+		Expect(secondRun).To(BeTrue())
 	})
 
 	It("stops and runs the rewind of an action if it fails", func() {
@@ -72,12 +72,12 @@ var _ = Describe("Rewind", func() {
 		}
 
 		err := actions.Execute()
-		Ω(err).Should(MatchError("disaster"))
+		Expect(err).To(MatchError("disaster"))
 
-		Ω(firstRun).Should(BeTrue())
-		Ω(secondRun).Should(BeTrue())
-		Ω(secondReverseRun).Should(BeTrue())
-		Ω(thirdRun).Should(BeFalse())
+		Expect(firstRun).To(BeTrue())
+		Expect(secondRun).To(BeTrue())
+		Expect(secondReverseRun).To(BeTrue())
+		Expect(thirdRun).To(BeFalse())
 	})
 
 	It("gives up if the rewind action fails", func() {
@@ -115,12 +115,12 @@ var _ = Describe("Rewind", func() {
 		}
 
 		err := actions.Execute()
-		Ω(err).Should(MatchError("uh oh: another disaster"))
+		Expect(err).To(MatchError("uh oh: another disaster"))
 
-		Ω(firstRun).Should(BeTrue())
-		Ω(secondRun).Should(BeTrue())
-		Ω(secondReverseRun).Should(BeTrue())
-		Ω(thirdRun).Should(BeFalse())
+		Expect(firstRun).To(BeTrue())
+		Expect(secondRun).To(BeTrue())
+		Expect(secondReverseRun).To(BeTrue())
+		Expect(thirdRun).To(BeFalse())
 	})
 
 	It("just returns the error if a rewind fails with no reverse message", func() {
@@ -157,11 +157,11 @@ var _ = Describe("Rewind", func() {
 		}
 
 		err := actions.Execute()
-		Ω(err).Should(MatchError("another disaster"))
+		Expect(err).To(MatchError("another disaster"))
 
-		Ω(firstRun).Should(BeTrue())
-		Ω(secondRun).Should(BeTrue())
-		Ω(secondReverseRun).Should(BeTrue())
-		Ω(thirdRun).Should(BeFalse())
+		Expect(firstRun).To(BeTrue())
+		Expect(secondRun).To(BeTrue())
+		Expect(secondReverseRun).To(BeTrue())
+		Expect(thirdRun).To(BeFalse())
 	})
 })
