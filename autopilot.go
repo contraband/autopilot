@@ -180,7 +180,12 @@ func (repo *ApplicationRepo) ListApplications() error {
 }
 
 func (repo *ApplicationRepo) DoesAppExist(appName string) (bool, error) {
-	path := fmt.Sprintf(`v2/apps?q=name:%s`, appName)
+	space, err := repo.conn.GetCurrentSpace()
+	if err != nil {
+		return false, err
+	}
+
+	path := fmt.Sprintf(`v2/apps?q=name:%s&q=space_guid:%s`, appName, space.Guid)
 	result, err := repo.conn.CliCommandWithoutTerminalOutput("curl", path)
 
 	if err != nil {

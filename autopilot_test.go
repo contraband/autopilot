@@ -10,6 +10,7 @@ import (
 	. "github.com/concourse/autopilot"
 
 	"github.com/cloudfoundry/cli/plugin/fakes"
+	plugin_models "github.com/cloudfoundry/cli/plugin/models"
 )
 
 func TestAutopilot(t *testing.T) {
@@ -121,9 +122,23 @@ var _ = Describe("ApplicationRepo", func() {
 			response := []string{
 				`{"total_results":1}`,
 			}
+			spaceGUID := "4"
 
 			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(
+				plugin_models.Space{
+					SpaceFields: plugin_models.SpaceFields{
+						Guid: spaceGUID,
+					},
+				},
+				nil,
+			)
+
 			result, err := repo.DoesAppExist("app-name")
+
+			Expect(cliConn.CliCommandWithoutTerminalOutputCallCount()).To(Equal(1))
+			args := cliConn.CliCommandWithoutTerminalOutputArgsForCall(0)
+			Expect(args).To(Equal([]string{"curl", "v2/apps?q=name:app-name&q=space_guid:4"}))
 
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(result).Should(BeTrue())
