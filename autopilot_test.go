@@ -160,26 +160,28 @@ var _ = Describe("ApplicationRepo", func() {
 
 	Describe("PushApplication", func() {
 		It("pushes an application with both a manifest and a path", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Expect(args).To(Equal([]string{
 				"push",
+				"appName",
 				"-f", "/path/to/a/manifest.yml",
 				"-p", "/path/to/the/app",
 			}))
 		})
 
 		It("pushes an application with only a manifest", func() {
-			err := repo.PushApplication("/path/to/a/manifest.yml", "")
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Expect(args).To(Equal([]string{
 				"push",
+				"appName",
 				"-f", "/path/to/a/manifest.yml",
 			}))
 		})
@@ -187,7 +189,7 @@ var _ = Describe("ApplicationRepo", func() {
 		It("returns errors from the push", func() {
 			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
 
-			err := repo.PushApplication("/path/to/a/manifest.yml", "/path/to/the/app")
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app")
 			Expect(err).To(MatchError("bad app"))
 		})
 	})
