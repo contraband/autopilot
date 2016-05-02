@@ -40,7 +40,7 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(manifestPath, appPath)
+				return appRepo.PushApplication(appName, manifestPath, appPath)
 			},
 			ReversePrevious: func() error {
 				// If the app cannot start we'll have a lingering application
@@ -59,12 +59,12 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 	}
 }
 
-func getActionsForNewApp(appRepo *ApplicationRepo, manifestPath, appPath string) []rewind.Action {
+func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string) []rewind.Action {
 	return []rewind.Action{
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(manifestPath, appPath)
+				return appRepo.PushApplication(appName, manifestPath, appPath)
 			},
 		},
 	}
@@ -83,7 +83,7 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	if appExists {
 		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath)
 	} else {
-		actionList = getActionsForNewApp(appRepo, manifestPath, appPath)
+		actionList = getActionsForNewApp(appRepo, appName, manifestPath, appPath)
 	}
 
 	actions := rewind.Actions{
@@ -158,8 +158,8 @@ func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
 	return err
 }
 
-func (repo *ApplicationRepo) PushApplication(manifestPath, appPath string) error {
-	args := []string{"push", "-f", manifestPath}
+func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath string) error {
+	args := []string{"push", appName, "-f", manifestPath}
 
 	if appPath != "" {
 		args = append(args, "-p", appPath)
