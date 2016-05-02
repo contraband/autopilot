@@ -31,6 +31,8 @@ $ cf zero-downtime-push application-to-replace \
 Your application manifest **must** be up to date or the new application that
 is created will not resemble the application that it is replacing.
 
+You can check your application doesn't have unexpected environment variables or services which are missing from the application manifest with [Antifreeze](https://github.com/odlp/antifreeze).
+
 ## method
 
 *Autopilot* takes a different approach to other zero-downtime plugins. It
