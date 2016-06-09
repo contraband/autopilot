@@ -26,6 +26,9 @@ $ cf zero-downtime-push application-to-replace \
     -p path/to/new/path
 ```
 
+## optional arguments
+The ``--keep-existing-app`` flag will *stop* the existing app instead of deleting it, so that it can be restored more easily.
+
 ## warning
 
 Your application manifest **must** be up to date or the new application that
@@ -51,6 +54,7 @@ delivery environments.
    be load-balanced between the two applications.
 
 3. The old application is deleted along with its route mappings. All traffic
-   now goes to the new application.
+   now goes to the new application. Optionally, the old application can be stopped
+   instead of deleted using the ``--keep-existing-app`` flag.
 
 [indiana-jones]: https://www.youtube.com/watch?v=0gU35Tgtlmg
