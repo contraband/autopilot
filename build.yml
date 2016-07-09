@@ -4,7 +4,7 @@ image: docker:///concourse/static-golang
 
 inputs:
   - name: autopilot
-    path: gopath/src/github.com/concourse/autopilot
+    path: gopath/src/github.com/contraband/autopilot
 
 run:
-  path: gopath/src/github.com/concourse/autopilot/scripts/test.sh
+  path: gopath/src/github.com/contraband/autopilot/scripts/test.sh

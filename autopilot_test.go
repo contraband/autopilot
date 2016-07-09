@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/concourse/autopilot"
+	. "github.com/contraband/autopilot"
 
 	"github.com/cloudfoundry/cli/plugin/fakes"
 	plugin_models "github.com/cloudfoundry/cli/plugin/models"

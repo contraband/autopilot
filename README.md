@@ -6,17 +6,13 @@
 
 ## installation
 
-**On *nix**
+Download the latest version from the [releases][releases] page.
+
 ```
-$ go get github.com/concourse/autopilot
-$ cf install-plugin $GOPATH/bin/autopilot
+$ cf install-plugin path/to/downloaded/binary
 ```
 
-**On Windows**
-```
-$ go get github.com/concourse/autopilot
-$ cf install-plugin $env:GOPATH/bin/autopilot.exe
-```
+[releases]: https://github.com/contraband/autopilot/releases
 
 ## usage
 
@@ -31,7 +27,11 @@ $ cf zero-downtime-push application-to-replace \
 Your application manifest **must** be up to date or the new application that
 is created will not resemble the application that it is replacing.
 
-You can check your application doesn't have unexpected environment variables or services which are missing from the application manifest with [Antifreeze](https://github.com/odlp/antifreeze).
+You can check your application doesn't have unexpected environment variables or
+services which are missing from the application manifest with
+[Antifreeze][antifreeze].
+
+[antifreeze]: https://github.com/odlp/antifreeze
 
 ## method
 

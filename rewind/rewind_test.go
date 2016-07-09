@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/concourse/autopilot/rewind"
+	"github.com/contraband/autopilot/rewind"
 )
 
 var _ = Describe("Rewind", func() {
