@@ -40,7 +40,13 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(appName, manifestPath, appPath)
+				_, err := appRepo.PushApplication(appName, manifestPath, appPath)
+
+        if err != nil {
+      		return err
+      	}
+
+        return appRepo.CopyEnv(venerableAppName(appName), appName)
 			},
 			ReversePrevious: func() error {
 				// If the app cannot start we'll have a lingering application
@@ -167,6 +173,31 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 
 	_, err := repo.conn.CliCommand(args...)
 	return err
+}
+
+func (repo *ApplicationRepo) CopyEnv(oldName, newName string) error {
+
+	envs, err := repo.conn.CliCommand("env", oldName)
+	if err != nil {
+		return err
+	}
+
+  begin := LastIndex(envs, "User-Provided:") + len("User-Provided:")
+  end := Index(envs[begin:], "\n\n")
+
+  userProvidedEnvs := Split(envs[begin:end], "\n")
+
+  for _, env := range userProvidedEnvs {
+    seperatorIndex := Index(env, ": ")
+    envName = env[:seperatorIndex]
+    evnValue = env[seperatorIndex + len(": "):]
+
+    _, err := repo.conn.CliCommand("set-env", newName, envName, envValue)
+
+    if err != nil {
+  		return err
+  	}
+  }
 }
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
