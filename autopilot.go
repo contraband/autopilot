@@ -40,7 +40,7 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 		// push
 		{
 			Forward: func() error {
-				_, err := appRepo.PushApplication(appName, manifestPath, appPath)
+				err := appRepo.PushApplication(appName, manifestPath, appPath)
 
         if err != nil {
       		return err
@@ -175,29 +175,46 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 	return err
 }
 
+func getUserProvidedEnvs (cfEnvOutput string) map[string]string {
+
+	begin := strings.LastIndex(cfEnvOutput, "User-Provided:\n") + len("User-Provided:\n")
+	end := begin + strings.Index(cfEnvOutput[begin:], "\n\n")
+
+	envsString := cfEnvOutput[begin:end]
+
+	userProvidedEnvs := strings.Split(envsString, "\n")
+
+	envs := make(map[string]string)
+
+  for _, envString := range userProvidedEnvs {
+    seperatorIndex := strings.Index(envString, ": ")
+    envName := envString[:seperatorIndex]
+    envValue := envString[seperatorIndex + len(": "):]
+
+		envs[envName] = envValue
+  }
+
+  return envs
+}
+
 func (repo *ApplicationRepo) CopyEnv(oldName, newName string) error {
 
-	envs, err := repo.conn.CliCommand("env", oldName)
+	envsString, err := repo.conn.CliCommand("env", oldName)
 	if err != nil {
 		return err
 	}
 
-  begin := LastIndex(envs, "User-Provided:") + len("User-Provided:")
-  end := Index(envs[begin:], "\n\n")
-
-  userProvidedEnvs := Split(envs[begin:end], "\n")
-
-  for _, env := range userProvidedEnvs {
-    seperatorIndex := Index(env, ": ")
-    envName = env[:seperatorIndex]
-    evnValue = env[seperatorIndex + len(": "):]
-
-    _, err := repo.conn.CliCommand("set-env", newName, envName, envValue)
+	for envName, envValue := range getUserProvidedEnvs(envsString[0]) {
+		_, err := repo.conn.CliCommand("set-env", newName, envName, envValue)
 
     if err != nil {
   		return err
   	}
-  }
+	}
+
+  _, err = repo.conn.CliCommand("restage", newName)
+
+  return err
 }
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
