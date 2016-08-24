@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -185,7 +186,7 @@ func (repo *ApplicationRepo) DoesAppExist(appName string) (bool, error) {
 		return false, err
 	}
 
-	path := fmt.Sprintf(`v2/apps?q=name:%s&q=space_guid:%s`, appName, space.Guid)
+	path := fmt.Sprintf(`v2/apps?q=name:%s&q=space_guid:%s`, url.QueryEscape(appName), space.Guid)
 	result, err := repo.conn.CliCommandWithoutTerminalOutput("curl", path)
 
 	if err != nil {

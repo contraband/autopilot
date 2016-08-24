@@ -144,6 +144,32 @@ var _ = Describe("ApplicationRepo", func() {
 			Expect(result).To(BeTrue())
 		})
 
+		It("URL encodes the application name", func() {
+			response := []string{
+				`{"total_results":1}`,
+			}
+			spaceGUID := "4"
+
+			cliConn.CliCommandWithoutTerminalOutputReturns(response, nil)
+			cliConn.GetCurrentSpaceReturns(
+				plugin_models.Space{
+					SpaceFields: plugin_models.SpaceFields{
+						Guid: spaceGUID,
+					},
+				},
+				nil,
+			)
+
+			result, err := repo.DoesAppExist("app name")
+
+			Expect(cliConn.CliCommandWithoutTerminalOutputCallCount()).To(Equal(1))
+			args := cliConn.CliCommandWithoutTerminalOutputArgsForCall(0)
+			Expect(args).To(Equal([]string{"curl", "v2/apps?q=name:app+name&q=space_guid:4"}))
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
 		It("returns false if the app does not exist", func() {
 			response := []string{
 				`{"total_results":0}`,
