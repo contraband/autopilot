@@ -6,7 +6,7 @@
 
 ## installation
 
-Download the latest version from the [releases][releases] page.
+Download the latest version from the [releases][releases] page and make it executable.
 
 ```
 $ cf install-plugin path/to/downloaded/binary
