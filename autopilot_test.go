@@ -4,13 +4,14 @@ import (
 	"errors"
 	"testing"
 
+	"code.cloudfoundry.org/cli/plugin/pluginfakes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/contraband/autopilot"
 
-	"github.com/cloudfoundry/cli/plugin/fakes"
-	plugin_models "github.com/cloudfoundry/cli/plugin/models"
+	plugin_models "code.cloudfoundry.org/cli/plugin/models"
 )
 
 func TestAutopilot(t *testing.T) {
@@ -49,12 +50,12 @@ var _ = Describe("Flag Parsing", func() {
 
 var _ = Describe("ApplicationRepo", func() {
 	var (
-		cliConn *fakes.FakeCliConnection
+		cliConn *pluginfakes.FakeCliConnection
 		repo    *ApplicationRepo
 	)
 
 	BeforeEach(func() {
-		cliConn = &fakes.FakeCliConnection{}
+		cliConn = &pluginfakes.FakeCliConnection{}
 		repo = NewApplicationRepo(cliConn)
 	})
 
