@@ -99,8 +99,7 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	fmt.Println("A new version of your application has successfully been pushed!")
 	fmt.Println()
 
-	err = appRepo.ListApplications()
-	fatalIf(err)
+	_ = appRepo.ListApplications()
 }
 
 func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
