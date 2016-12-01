@@ -41,7 +41,13 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(appName, manifestPath, appPath)
+				err := appRepo.PushApplication(appName, manifestPath, appPath)
+
+        if err != nil {
+      		return err
+      	}
+
+        return appRepo.CopyEnv(venerableAppName(appName), appName)
 			},
 			ReversePrevious: func() error {
 				// If the app cannot start we'll have a lingering application
@@ -167,6 +173,48 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 
 	_, err := repo.conn.CliCommand(args...)
 	return err
+}
+
+func getUserProvidedEnvs (cfEnvOutput string) map[string]string {
+
+	begin := strings.LastIndex(cfEnvOutput, "User-Provided:\n") + len("User-Provided:\n")
+	end := begin + strings.Index(cfEnvOutput[begin:], "\n\n")
+
+	envsString := cfEnvOutput[begin:end]
+
+	userProvidedEnvs := strings.Split(envsString, "\n")
+
+	envs := make(map[string]string)
+
+  for _, envString := range userProvidedEnvs {
+    seperatorIndex := strings.Index(envString, ": ")
+    envName := envString[:seperatorIndex]
+    envValue := envString[seperatorIndex + len(": "):]
+
+		envs[envName] = envValue
+  }
+
+  return envs
+}
+
+func (repo *ApplicationRepo) CopyEnv(oldName, newName string) error {
+
+	envsString, err := repo.conn.CliCommand("env", oldName)
+	if err != nil {
+		return err
+	}
+
+	for envName, envValue := range getUserProvidedEnvs(envsString[0]) {
+		_, err := repo.conn.CliCommand("set-env", newName, envName, envValue)
+
+    if err != nil {
+  		return err
+  	}
+	}
+
+  _, err = repo.conn.CliCommand("restage", newName)
+
+  return err
 }
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
