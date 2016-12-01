@@ -22,6 +22,16 @@ $ cf zero-downtime-push application-to-replace \
     -p path/to/new/path
 ```
 
+## Docker
+
+Docker alpine [image](https://github.com/dominikhahn/docker-cf-cli-autopilot-antifreeze) which includes the latest [CF CLI](https://github.com/cloudfoundry/cli), [autopilot](https://github.com/concourse/autopilot) and [Antifreeze](https://github.com/odlp/antifreeze) plugin.
+
+```
+$ docker pull dominikhahn/cf-cli-autopilot-antifreeze:latest
+$ docker run -it dominikhahn/cf-cli-autopilot-antifreeze cf zero-downtime-push --help
+$ docker run -it dominikhahn/cf-cli-autopilot-antifreeze cf check-manifest --help
+```
+
 ## warning
 
 Your application manifest **must** be up to date or the new application that
