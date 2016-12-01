@@ -30,8 +30,21 @@ func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
 }
 
-func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string) []rewind.Action {
+func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, options AutopilotOptions) []rewind.Action {
 	return []rewind.Action{
+		// delete old version if it still exists
+		{
+			Forward: func() error {
+				appExists, err := appRepo.DoesAppExist(venerableAppName(appName))
+				fatalIf(err)
+				if(appExists) {
+					fmt.Println("Found old version of app running, deleting.")
+					return appRepo.DeleteApplication(venerableAppName(appName))
+				} else {
+					return nil
+				}
+			},
+		},
 		// rename
 		{
 			Forward: func() error {
@@ -51,10 +64,16 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 				return appRepo.RenameApplication(venerableAppName(appName), appName)
 			},
 		},
-		// delete
+		// delete/stop
 		{
 			Forward: func() error {
-				return appRepo.DeleteApplication(venerableAppName(appName))
+				if(options.KeepExisting){
+					fmt.Println("Stopping old version of app. Remove the --keep-existing-app flag to delete it automatically.")
+					return appRepo.StopApplication(venerableAppName(appName))
+				} else {
+					fmt.Println("Deleting old version of app. Use the --keep-existing-app flag to preserve it.")
+					return appRepo.DeleteApplication(venerableAppName(appName))
+				}
 			},
 		},
 	}
@@ -73,7 +92,7 @@ func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPat
 
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, err := ParseArgs(args)
+	appName, manifestPath, appPath, options, err := ParseArgs(args)
 	fatalIf(err)
 
 	appExists, err := appRepo.DoesAppExist(appName)
@@ -82,7 +101,7 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	var actionList []rewind.Action
 
 	if appExists {
-		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath)
+		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath, options)
 	} else {
 		actionList = getActionsForNewApp(appRepo, appName, manifestPath, appPath)
 	}
@@ -97,6 +116,9 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 
 	fmt.Println()
 	fmt.Println("A new version of your application has successfully been pushed!")
+	if(options.KeepExisting){
+		fmt.Println("The old version of your application has not been deleted. It can be restored by invoking cf zero-downtime-revert <appName>")
+	}
 	fmt.Println()
 
 	_ = appRepo.ListApplications()
@@ -108,7 +130,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
-			Build: 2,
+			Build: 3,
 		},
 		Commands: []plugin.Command{
 			{
@@ -122,29 +144,36 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func ParseArgs(args []string) (string, string, string, error) {
+func ParseArgs(args []string) (string, string, string, AutopilotOptions, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
+	keepVenerable := flags.Bool("keep-existing-app", false, "keep existing app running")
 
 	err := flags.Parse(args[2:])
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", AutopilotOptions{}, err
 	}
 
 	appName := args[1]
 
 	if *manifestPath == "" {
-		return "", "", "", ErrNoManifest
+		return "", "", "", AutopilotOptions{}, ErrNoManifest
 	}
 
-	return appName, *manifestPath, *appPath, nil
+	options := AutopilotOptions{KeepExisting: *keepVenerable}
+
+	return appName, *manifestPath, *appPath, options, nil
 }
 
 var ErrNoManifest = errors.New("a manifest is required to push this application")
 
 type ApplicationRepo struct {
 	conn plugin.CliConnection
+}
+
+type AutopilotOptions struct {
+	KeepExisting bool
 }
 
 func NewApplicationRepo(conn plugin.CliConnection) *ApplicationRepo {
@@ -171,6 +200,11 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
 	_, err := repo.conn.CliCommand("delete", appName, "-f")
+	return err
+}
+
+func (repo *ApplicationRepo) StopApplication(appName string) error {
+	_, err := repo.conn.CliCommand("stop", appName)
 	return err
 }
 
