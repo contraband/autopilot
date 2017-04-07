@@ -35,21 +35,28 @@ func g2AppName(appName string) string {
 
 func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, g1Exists bool, g2Exists bool) []rewind.Action {
 	return []rewind.Action{
-		// versioning
+		// // versioning
+		// {
+		// 	Forward: func() error {
+		// 		if g2Exists {
+		// 			appRepo.DeleteApplication(g2AppName(appName))
+		// 		}
+		// 		if g1Exists {
+		// 			appRepo.RenameApplication(g1AppName(appName), g2AppName(appName))
+		// 		}
+		// 		return
+		// 	},
+		// },
+		// rename
 		{
 			Forward: func() error {
+				// versioning
 				if g2Exists {
 					appRepo.DeleteApplication(g2AppName(appName))
 				}
 				if g1Exists {
-					appRepo.RenameApplication(g1AppName(appName), g2AppName))
+					appRepo.RenameApplication(g1AppName(appName), g2AppName(appName))
 				}
-				return
-			},
-		},
-		// rename
-		{
-			Forward: func() error {
 				return appRepo.RenameApplication(appName, g1AppName(appName))
 			},
 		},
@@ -67,12 +74,12 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 			},
 		},
 		// unmap-route and stop
-		 {
-		 	Forward: func() error {
-				 appRepo.UnMapRouteApplication(g1AppName(appName), appName)
-				 return appRepo.StopApplication(g1AppName(appName))
-		 	},
-		 },
+		{
+			Forward: func() error {
+				appRepo.UnMapRouteApplication(g1AppName(appName), appName)
+				return appRepo.StopApplication(g1AppName(appName))
+			},
+		},
 	}
 }
 
@@ -174,17 +181,18 @@ func NewApplicationRepo(conn plugin.CliConnection) *ApplicationRepo {
 	}
 }
 
-func (repo *ApplicationRepo) UnMapRouteApplication(appName string, domain string, hostName string){
-	result, err: = repo.conn.GetApp(appName)
+func (repo *ApplicationRepo) UnMapRouteApplication(appName string, hostName string) error {
+	result, err := repo.conn.GetApp(appName)
+	// fmt.Println(result)
 	if err != nil {
 		return err
 	}
-	_, err := repo.conn.CliCommand("unmap-route", appName, result[0].Domain.Name, "-n", hostName)
+	_, err = repo.conn.CliCommand("unmap-route", appName, result.Routes[0].Domain.Name, "-n", hostName)
 	return err
 }
 
-func (repo *ApplicationRepo) StopApplication(appName string) {
-	_, err := repo.com.CliCommand("stop", appName)
+func (repo *ApplicationRepo) StopApplication(appName string) error {
+	_, err := repo.conn.CliCommand("stop", appName)
 	return err
 }
 
