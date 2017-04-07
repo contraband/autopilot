@@ -27,7 +27,7 @@ func main() {
 type RollbackPlugin struct{}
 
 func venerableAppName(appName string) string {
-	return fmt.Sprintf("%s-venerable", appName)
+	return fmt.Sprintf("%s-g1", appName)
 }
 
 func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string) []rewind.Action {
@@ -51,12 +51,12 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 				return appRepo.RenameApplication(venerableAppName(appName), appName)
 			},
 		},
-		// delete
-		{
-			Forward: func() error {
-				return appRepo.DeleteApplication(venerableAppName(appName))
-			},
-		},
+		// // delete
+		// {
+		// 	Forward: func() error {
+		// 		return appRepo.DeleteApplication(venerableAppName(appName))
+		// 	},
+		// },
 	}
 }
 
