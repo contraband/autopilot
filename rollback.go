@@ -21,10 +21,10 @@ func fatalIf(err error) {
 }
 
 func main() {
-	plugin.Start(&AutopilotPlugin{})
+	plugin.Start(&RollbackPlugin{})
 }
 
-type AutopilotPlugin struct{}
+type RollbackPlugin struct{}
 
 func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
@@ -71,7 +71,7 @@ func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPat
 	}
 }
 
-func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
+func (plugin RollbackPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	appRepo := NewApplicationRepo(cliConnection)
 	appName, manifestPath, appPath, err := ParseArgs(args)
 	fatalIf(err)
@@ -102,9 +102,9 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	_ = appRepo.ListApplications()
 }
 
-func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
+func (RollbackPlugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name: "autopilot",
+		Name: "rollback",
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
@@ -112,10 +112,10 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 		},
 		Commands: []plugin.Command{
 			{
-				Name:     "zero-downtime-push",
-				HelpText: "Perform a zero-downtime push of an application over the top of an old one",
+				Name:     "blue-green-push",
+				HelpText: "Perform a zero-downtime push with versioning feature of an application over the top of an old one",
 				UsageDetails: plugin.Usage{
-					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
+					Usage: "$ cf blue-green-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
 				},
 			},
 		},
@@ -123,7 +123,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 }
 
 func ParseArgs(args []string) (string, string, string, error) {
-	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
+	flags := flag.NewFlagSet("blue-green-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
 
