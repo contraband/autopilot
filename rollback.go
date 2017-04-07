@@ -26,16 +26,31 @@ func main() {
 
 type RollbackPlugin struct{}
 
-func venerableAppName(appName string) string {
+func g1AppName(appName string) string {
 	return fmt.Sprintf("%s-g1", appName)
 }
+func g2AppName(appName string) string {
+	return fmt.Sprintf("%s-g2", appName)
+}
 
-func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string) []rewind.Action {
+func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, g1Exists bool, g2Exists bool) []rewind.Action {
 	return []rewind.Action{
+		// versioning
+		{
+			Forward: func() error {
+				if g2Exists {
+					appRepo.DeleteApplication(g2AppName(appName))
+				}
+				if g1Exists {
+					appRepo.RenameApplication(g1AppName(appName), g2AppName))
+				}
+				return
+			},
+		},
 		// rename
 		{
 			Forward: func() error {
-				return appRepo.RenameApplication(appName, venerableAppName(appName))
+				return appRepo.RenameApplication(appName, g1AppName(appName))
 			},
 		},
 		// push
@@ -48,15 +63,16 @@ func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, a
 				// We delete this application so that the rename can succeed
 				appRepo.DeleteApplication(appName)
 
-				return appRepo.RenameApplication(venerableAppName(appName), appName)
+				return appRepo.RenameApplication(g1AppName(appName), appName)
 			},
 		},
-		// // delete
-		// {
-		// 	Forward: func() error {
-		// 		return appRepo.DeleteApplication(venerableAppName(appName))
-		// 	},
-		// },
+		// unmap-route and stop
+		 {
+		 	Forward: func() error {
+				 appRepo.UnMapRouteApplication(g1AppName(appName), appName)
+				 return appRepo.StopApplication(g1AppName(appName))
+		 	},
+		 },
 	}
 }
 
@@ -79,10 +95,15 @@ func (plugin RollbackPlugin) Run(cliConnection plugin.CliConnection, args []stri
 	appExists, err := appRepo.DoesAppExist(appName)
 	fatalIf(err)
 
+	g1Exists, err := appRepo.DoesAppExist(appName + "-g1")
+	fatalIf(err)
+
+	g2Exists, err := appRepo.DoesAppExist(appName + "-g2")
+
 	var actionList []rewind.Action
 
 	if appExists {
-		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath)
+		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath, g1Exists, g2Exists)
 	} else {
 		actionList = getActionsForNewApp(appRepo, appName, manifestPath, appPath)
 	}
@@ -151,6 +172,20 @@ func NewApplicationRepo(conn plugin.CliConnection) *ApplicationRepo {
 	return &ApplicationRepo{
 		conn: conn,
 	}
+}
+
+func (repo *ApplicationRepo) UnMapRouteApplication(appName string, domain string, hostName string){
+	result, err: = repo.conn.GetApp(appName)
+	if err != nil {
+		return err
+	}
+	_, err := repo.conn.CliCommand("unmap-route", appName, result[0].Domain.Name, "-n", hostName)
+	return err
+}
+
+func (repo *ApplicationRepo) StopApplication(appName string) {
+	_, err := repo.com.CliCommand("stop", appName)
+	return err
 }
 
 func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
