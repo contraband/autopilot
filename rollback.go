@@ -35,19 +35,6 @@ func g2AppName(appName string) string {
 
 func getActionsForExistingApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, g1Exists bool, g2Exists bool) []rewind.Action {
 	return []rewind.Action{
-		// // versioning
-		// {
-		// 	Forward: func() error {
-		// 		if g2Exists {
-		// 			appRepo.DeleteApplication(g2AppName(appName))
-		// 		}
-		// 		if g1Exists {
-		// 			appRepo.RenameApplication(g1AppName(appName), g2AppName(appName))
-		// 		}
-		// 		return
-		// 	},
-		// },
-		// rename
 		{
 			Forward: func() error {
 				// versioning
