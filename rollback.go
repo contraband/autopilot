@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/cli/plugin"
-	"github.com/contraband/autopilot/rewind"
+	"github.com/sakkuru/rollback-push/rewind"
 )
 
 func fatalIf(err error) {
