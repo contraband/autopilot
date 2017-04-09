@@ -38,11 +38,20 @@ func versionedAppName(appName string, version string) string {
 func getActionsForRollback(appRepo *ApplicationRepo, appName string, version string) []rewind.Action {
 	return []rewind.Action{
 		{
+			// start an old app
 			Forward: func() error {
-				// start an old version app and map-route it. then unmap the current app
-				appRepo.StartApplication(versionedAppName(appName, version))
-				appRepo.MapRouteApplication(versionedAppName(appName, version), appName)
-				return appRepo.UnMapRouteApplication(appName, appName)
+				return appRepo.StartApplication(versionedAppName(appName, version))
+			},
+		},
+		{
+			Forward: func() error {
+				// Map-route it. then unmap the current app
+				hostName, err := appRepo.GetHostName(appName)
+				if err != nil {
+					return fmt.Errorf("Can not get hostname of the %s", appName)
+				}
+				appRepo.MapRouteApplication(versionedAppName(appName, version), hostName)
+				return appRepo.UnMapRouteApplication(appName, hostName)
 			},
 		},
 		{
@@ -144,10 +153,6 @@ func (plugin RollbackPlugin) Run(cliConnection plugin.CliConnection, args []stri
 		appName, version, err := ParseRollbackArgs(args)
 		fatalIf(err)
 		var actionList []rewind.Action
-		actions := rewind.Actions{
-			Actions:              actionList,
-			RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
-		}
 
 		appExists, err := appRepo.DoesAppExist(appName)
 		fatalIf(err)
@@ -158,6 +163,10 @@ func (plugin RollbackPlugin) Run(cliConnection plugin.CliConnection, args []stri
 		} else {
 			err := fmt.Errorf("Application: %s not found", appName)
 			fatalIf(err)
+		}
+		actions := rewind.Actions{
+			Actions:              actionList,
+			RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
 		}
 
 		err = actions.Execute()
@@ -237,6 +246,13 @@ func NewApplicationRepo(conn plugin.CliConnection) *ApplicationRepo {
 	return &ApplicationRepo{
 		conn: conn,
 	}
+}
+func (repo *ApplicationRepo) GetHostName(appName string) (string, error) {
+	result, err := repo.conn.GetApp(appName)
+	if err != nil {
+		return "", err
+	}
+	return result.Routes[0].Host, err
 }
 
 func (repo *ApplicationRepo) GetDomainName(appName string) (string, error) {
