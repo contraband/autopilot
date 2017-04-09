@@ -82,39 +82,46 @@ func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPat
 }
 
 func (plugin RollbackPlugin) Run(cliConnection plugin.CliConnection, args []string) {
-	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, err := ParseArgs(args)
-	fatalIf(err)
+	if args[0] == "blue-green-push" {
+		appRepo := NewApplicationRepo(cliConnection)
+		appName, manifestPath, appPath, err := ParseArgs(args)
+		fatalIf(err)
 
-	appExists, err := appRepo.DoesAppExist(appName)
-	fatalIf(err)
+		appExists, err := appRepo.DoesAppExist(appName)
+		fatalIf(err)
 
-	g1Exists, err := appRepo.DoesAppExist(appName + "-g1")
-	fatalIf(err)
+		g1Exists, err := appRepo.DoesAppExist(appName + "-g1")
+		fatalIf(err)
 
-	g2Exists, err := appRepo.DoesAppExist(appName + "-g2")
+		g2Exists, err := appRepo.DoesAppExist(appName + "-g2")
 
-	var actionList []rewind.Action
+		var actionList []rewind.Action
 
-	if appExists {
-		actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath, g1Exists, g2Exists)
-	} else {
-		actionList = getActionsForNewApp(appRepo, appName, manifestPath, appPath)
+		if appExists {
+			actionList = getActionsForExistingApp(appRepo, appName, manifestPath, appPath, g1Exists, g2Exists)
+		} else {
+			actionList = getActionsForNewApp(appRepo, appName, manifestPath, appPath)
+		}
+
+		actions := rewind.Actions{
+			Actions:              actionList,
+			RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
+		}
+
+		err = actions.Execute()
+		fatalIf(err)
+
+		fmt.Println()
+		fmt.Println("A new version of your application has successfully been pushed!")
+		fmt.Println()
+
+		_ = appRepo.ListApplications()
 	}
 
-	actions := rewind.Actions{
-		Actions:              actionList,
-		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
+	if args[0] == "blue-green-rollback" {
+
 	}
 
-	err = actions.Execute()
-	fatalIf(err)
-
-	fmt.Println()
-	fmt.Println("A new version of your application has successfully been pushed!")
-	fmt.Println()
-
-	_ = appRepo.ListApplications()
 }
 
 func (RollbackPlugin) GetMetadata() plugin.PluginMetadata {
@@ -131,6 +138,13 @@ func (RollbackPlugin) GetMetadata() plugin.PluginMetadata {
 				HelpText: "Perform a zero-downtime push with versioning feature of an application over the top of an old one",
 				UsageDetails: plugin.Usage{
 					Usage: "$ cf blue-green-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
+				},
+			},
+			{
+				Name:     "blue-green-rollback",
+				HelpText: "Perform a rollback from old version",
+				UsageDetails: plugin.Usage{
+					Usage: "$ cf blue-green-rollback application-name version (e.g. g1 or g2)",
 				},
 			},
 		},
