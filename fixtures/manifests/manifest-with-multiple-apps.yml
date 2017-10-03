@@ -1,0 +1,4 @@
+---
+applications:
+- name: first-appname
+- name: second-appname

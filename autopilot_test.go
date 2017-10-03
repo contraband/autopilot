@@ -25,14 +25,14 @@ var _ = Describe("Flag Parsing", func() {
 			[]string{
 				"zero-downtime-push",
 				"appname",
-				"-f", "manifest-path",
+				"-f", "./fixtures/manifests/manifest.yml",
 				"-p", "app-path",
 			},
 		)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(appName).To(Equal("appname"))
-		Expect(manifestPath).To(Equal("manifest-path"))
+		Expect(manifestPath).To(Equal("./fixtures/manifests/manifest.yml"))
 		Expect(appPath).To(Equal("app-path"))
 	})
 
@@ -46,6 +46,63 @@ var _ = Describe("Flag Parsing", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(appName).To(Equal("appname"))
+	})
+
+	It("does not require app name if provided in the manifest", func() {
+		appName, manifestPath, _, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"-f", "./fixtures/manifests/manifest.yml",
+			},
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(appName).To(Equal("appname-from-manifest"))
+		Expect(manifestPath).To(Equal("./fixtures/manifests/manifest.yml"))
+	})
+
+	It("errors if no app name is provided (as either a flag or in the manifest)", func() {
+		_, _, _, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"-f", "./fixtures/manifests/manifest-without-appname.yml",
+			},
+		)
+		Expect(err).To(MatchError(ErrNoAppName))
+	})
+
+	It("the provided app flag takes precedence over an app name in the manifest", func() {
+		appName, manifestPath, _, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"appname-from-flag",
+				"-f", "./fixtures/manifests/manifest.yml",
+			},
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(appName).To(Equal("appname-from-flag"))
+		Expect(manifestPath).To(Equal("./fixtures/manifests/manifest.yml"))
+	})
+
+	It("defaults to finding the name from the first app in the manifest", func() {
+		appName, _, _, _ := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"-f", "./fixtures/manifests/manifest-with-multiple-apps.yml",
+			},
+		)
+		Expect(appName).To(Equal("first-appname"))
+	})
+
+	It("errors if manifest path is bad", func() {
+		_, _, _, err := ParseArgs(
+			[]string{
+				"zero-downtime-push",
+				"-f", "./fixtures/manifests/nonexistent-manifest.yml",
+			},
+		)
+		Expect(err).To(HaveOccurred())
 	})
 })
 
