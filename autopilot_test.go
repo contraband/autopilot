@@ -36,15 +36,16 @@ var _ = Describe("Flag Parsing", func() {
 		Expect(appPath).To(Equal("app-path"))
 	})
 
-	It("requires a manifest", func() {
-		_, _, _, err := ParseArgs(
+	It("does not require path or manifest flag", func() {
+		appName, _, _, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
-				"-p", "app-path",
 			},
 		)
-		Expect(err).To(MatchError(ErrNoManifest))
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(appName).To(Equal("appname"))
 	})
 })
 

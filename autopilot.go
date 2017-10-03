@@ -134,14 +134,8 @@ func ParseArgs(args []string) (string, string, string, error) {
 
 	appName := args[1]
 
-	if *manifestPath == "" {
-		return "", "", "", ErrNoManifest
-	}
-
 	return appName, *manifestPath, *appPath, nil
 }
-
-var ErrNoManifest = errors.New("a manifest is required to push this application")
 
 type ApplicationRepo struct {
 	conn plugin.CliConnection
