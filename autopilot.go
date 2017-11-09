@@ -72,6 +72,10 @@ func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPat
 }
 
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
+	if len(args) > 0 && args[0] == "CLI-MESSAGE-UNINSTALL" {
+		return
+	}
+
 	appRepo := NewApplicationRepo(cliConnection)
 	appName, manifestPath, appPath, err := ParseArgs(args)
 	fatalIf(err)
