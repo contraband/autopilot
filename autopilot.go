@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/cli/plugin"
+	"code.cloudfoundry.org/cli/cf/manifest"
+	"code.cloudfoundry.org/cli/cf/models"
+	cfFlag "code.cloudfoundry.org/cli/command/flag"
 	"github.com/contraband/autopilot/rewind"
 )
 
@@ -131,21 +134,59 @@ func ParseArgs(args []string) (string, string, string, error) {
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
 
-	err := flags.Parse(args[2:])
+	var appName string
+	var err error
+
+	if args[1][0] == '-' {
+		err = flags.Parse(args[1:])
+		appName, err = GetAppNameFromManifest(*manifestPath)
+	} else {
+		err = flags.Parse(args[2:])
+		appName = args[1]
+	}
+
 	if err != nil {
 		return "", "", "", err
 	}
 
-	appName := args[1]
-
-	if *manifestPath == "" {
-		return "", "", "", ErrNoManifest
+	if appName == "" {
+		return "", "", "", ErrNoAppName
 	}
 
 	return appName, *manifestPath, *appPath, nil
 }
 
-var ErrNoManifest = errors.New("a manifest is required to push this application")
+func GetAppNameFromManifest(manifestPath string) (string, error) {
+	var err error
+
+	var path = cfFlag.PathWithExistenceCheck(manifestPath)
+	err = path.UnmarshalFlag(manifestPath)
+	if err != nil {
+		return "", err
+	}
+
+	var m *manifest.Manifest
+	var dr = manifest.NewDiskRepository()
+	m, err = dr.ReadManifest(manifestPath)
+	if err != nil {
+		return "", err
+	}
+
+	var apps []models.AppParams
+	apps, err = m.Applications()
+	if err != nil {
+		return "", err
+	}
+
+	var name = apps[0].Name
+	if name == nil {
+		return "", ErrNoAppName
+	}
+
+	return *name, nil
+}
+
+var ErrNoAppName = errors.New("a name is required to push this application")
 
 type ApplicationRepo struct {
 	conn plugin.CliConnection
