@@ -21,7 +21,7 @@ func TestAutopilot(t *testing.T) {
 
 var _ = Describe("Flag Parsing", func() {
 	It("parses a complete set of args", func() {
-		appName, manifestPath, appPath, showLogs, err := ParseArgs(
+		appName, manifestPath, appPath, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
@@ -34,11 +34,10 @@ var _ = Describe("Flag Parsing", func() {
 		Expect(appName).To(Equal("appname"))
 		Expect(manifestPath).To(Equal("manifest-path"))
 		Expect(appPath).To(Equal("app-path"))
-		Expect(showLogs).To(Equal(false))
 	})
 
 	It("requires a manifest", func() {
-		_, _, _, _, err := ParseArgs(
+		_, _, _, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
@@ -188,38 +187,36 @@ var _ = Describe("ApplicationRepo", func() {
 
 	Describe("PushApplication", func() {
 		It("pushes an application with both a manifest and a path", func() {
-			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app", false)
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(cliConn.CliCommandCallCount()).To(Equal(2))
+			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Expect(args).To(Equal([]string{
 				"push",
 				"appName",
 				"-f", "/path/to/a/manifest.yml",
-				"--no-start",
 				"-p", "/path/to/the/app",
 			}))
 		})
 
 		It("pushes an application with only a manifest", func() {
-			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "", false)
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(cliConn.CliCommandCallCount()).To(Equal(2))
+			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
 			args := cliConn.CliCommandArgsForCall(0)
 			Expect(args).To(Equal([]string{
 				"push",
 				"appName",
 				"-f", "/path/to/a/manifest.yml",
-				"--no-start",
 			}))
 		})
 
 		It("returns errors from the push", func() {
 			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
 
-			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app", false)
+			err := repo.PushApplication("appName", "/path/to/a/manifest.yml", "/path/to/the/app")
 			Expect(err).To(MatchError("bad app"))
 		})
 	})
