@@ -1,0 +1,17 @@
+---
+platform: darwin
+
+params:
+  CERT_PATH:
+
+outputs:
+- name: certificates-osx
+
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+
+    cp -a $CERT_PATH/* certificates-osx

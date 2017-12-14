@@ -1,0 +1,37 @@
+---
+platform: darwin
+
+params:
+  CERT_COMMON_NAME:
+  CERT_LOCATION:
+  CERT_PASSWORD_LOCATION:
+
+inputs:
+- name: certificates
+- name: cli
+- name: edge-osx-installer-64
+
+outputs:
+- name: signed-osx-installer
+
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+
+    VERSION=$(cat cli/ci/VERSION)
+    CERT_PASSWORD=$(cat certificates/$CERT_PASSWORD_LOCATION)
+
+    security create-keychain -p "" temp-keychain
+
+    trap "security delete-keychain temp-keychain" 0
+
+    security import certificates/$CERT_LOCATION -k temp-keychain -T "$(which productsign)" -P "$CERT_PASSWORD"
+
+    productsign --timestamp \
+      --sign "$CERT_COMMON_NAME" \
+      --keychain temp-keychain \
+      edge-osx-installer-64/cf-cli-installer_edge_osx.pkg \
+      signed-osx-installer/cf-cli-installer_${VERSION}_osx.pkg

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+set -e
+
+xargs_func () {
+  if [[ $(uname) == "Darwin" ]]; then
+    xargs -n 1 -P 15 $@
+  else
+    xargs -n 1 -P 15 -r $@
+  fi
+}
+
+CF_API=${CF_API:-"api.bosh-lite.com"}
+CF_USERNAME=${CF_USERNAME:-"admin"}
+CF_PASSWORD=${CF_PASSWORD:-"admin"}
+
+export CF_CLI_EXPERIMENTAL=true
+export CF_DIAL_TIMEOUT=15
+
+if [[ -z $SKIP_SSL_VALIDATION || $SKIP_SSL_VALIDATION == "true" ]]; then
+  cf api $CF_API --skip-ssl-validation
+else
+  cf api $CF_API
+fi
+
+cf auth $CF_USERNAME $CF_PASSWORD
+
+# we don't want the pipeline job to fail because there's a high chance of
+# failure when running commands in parallel
+set +e
+
+cf orgs | grep -i -e ^integration-org -e CATS- | xargs_func cf delete-org -f
+cf orgs | grep -i -e ^integration-org -e CATS- | xargs_func cf delete-org -f
+cf isolation-segments | grep -i ^integration-isolation-segment | xargs_func cf delete-isolation-segment -f
+cf service-brokers | grep -i -e ^integration-service-broker- -e CATS- | awk '{print $1}' | xargs_func cf delete-service-broker -f
+
+cf quotas | grep -i -e ^integration-quota -e CATS- | cut -d " " -f1 | xargs_func cf delete-quota -f
+
+cf create-org temp-org
+cf target -o temp-org
+cf domains | egrep -i ^\(sub.\)?integration- | cut -d " " -f1 | xargs_func cf delete-shared-domain -f
+
+cf security-groups | grep -i "^#.* integration-sec-group" | awk '{print $2}' | xargs_func cf delete-security-group -f
+
+cf delete-org -f temp-org
+
+CF_USERS=$(cf curl /v2/users | grep total_results | grep -o '[0-9]\+')
+USER_PAGES=$(( $CF_USERS / 50 + 1))
+
+for ((i=1; i<=${USER_PAGES}; i++)) ; do
+  cf curl "/v2/users?results-per-page=50&page=${i}" | \
+  jq -r .resources[].entity.username | \
+  grep -i -e ^integration-user -e CATS- | \
+  xargs_func cf delete-user -f || echo
+done
+

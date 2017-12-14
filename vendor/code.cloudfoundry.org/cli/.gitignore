@@ -1,0 +1,64 @@
+.DS_Store
+*.swp
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+*.syso
+
+# Folders
+_obj
+_test
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+
+out/
+release/*
+!release/index.html
+CHANGELOG.md.old
+
+*.iml
+*.zpi
+*.zwi
+
+*.go-e
+
+*.log
+
+.idea/
+
+tmp/
+
+.hg/
+
+*.test
+tags
+
+*.coverprofile
+
+#config craeted by bin/test
+fixtures/.cf
+
+#Compiled Plugins
+fixtures/plugins/test_1
+fixtures/plugins/test_2
+fixtures/plugins/empty_plugin
+fixtures/config/plugin-config/.cf/plugins/test_1
+fixtures/config/plugin-config/.cf/plugins/test_2
+fixtures/config/plugin-config/.cf/plugins/empty_plugin
+
+### VisualStudioCode ###
+.vscode

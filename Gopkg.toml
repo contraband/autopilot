@@ -1,0 +1,3 @@
+[[constraint]]
+  name = "code.cloudfoundry.org/cli"
+  version = "6.33.0"

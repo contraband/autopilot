@@ -1,0 +1,45 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfcli/cli-base
+
+inputs:
+- name: cli-ci
+- name: cf-cli-binaries
+- name: bosh-lite-lock
+- name: vars-store
+
+outputs:
+- name: cleanup-integration-outputs
+
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -e
+
+    ENV=$(cat bosh-lite-lock/name | cut -d "." -f 1)
+
+    export CF_PASSWORD=$(bosh int vars-store/ci/infrastructure/$ENV/deployment-vars.yml --path /cf_admin_password)
+    # output password into a temp file for consumption by Windows
+    echo $CF_PASSWORD > cleanup-integration-outputs/cf-password
+
+    set -ex
+
+    domain=$(cat bosh-lite-lock/name)
+    export CF_API="https://api.${domain}"
+
+    export PATH=$GOPATH/bin:$PATH
+
+    pushd cf-cli-binaries
+      tar xvzf cf-cli-binaries.tgz
+      chmod +x cf-cli_linux_x86-64
+      mv cf-cli_linux_x86-64 $GOPATH/bin/cf
+    popd
+
+    cd cli-ci
+    bin/cleanup-integration

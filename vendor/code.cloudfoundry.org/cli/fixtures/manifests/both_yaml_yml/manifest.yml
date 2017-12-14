@@ -1,0 +1,4 @@
+---
+applications:
+- name: yml-extension
+  memory: 256mb

@@ -1,0 +1,35 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfcli/cli-package
+
+params:
+  AWS_ACCESS_KEY_ID:
+  AWS_SECRET_ACCESS_KEY:
+
+inputs:
+- name: cli
+- name: repackaged-binaries-and-installers
+- name: signed-osx-installer
+- name: signed-redhat-installer
+- name: signed-windows-zips
+
+outputs:
+- name: cf-cli-osx-tarball
+
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+
+    VERSION=$(cat cli/ci/VERSION)
+
+    aws s3 cp repackaged-binaries-and-installers/ s3://cf-cli-releases/releases/v${VERSION}/ --recursive
+    aws s3 cp signed-osx-installer/ s3://cf-cli-releases/releases/v${VERSION}/ --recursive
+    aws s3 cp signed-redhat-installer/ s3://cf-cli-releases/releases/v${VERSION}/ --recursive
+    aws s3 cp signed-windows-zips/ s3://cf-cli-releases/releases/v${VERSION}/ --recursive

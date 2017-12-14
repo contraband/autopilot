@@ -1,0 +1,5 @@
+dir1/**/*
+!dir1/file1.txt
+!dir1/child-dir/file3.txt
+dir2/**/*
+.*

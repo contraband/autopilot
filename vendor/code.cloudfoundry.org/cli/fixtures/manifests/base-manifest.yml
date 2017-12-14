@@ -1,0 +1,8 @@
+---
+env:
+  foo: bar
+  will-be-overridden: baz
+services:
+ - base-service
+applications:
+ - name: base-app

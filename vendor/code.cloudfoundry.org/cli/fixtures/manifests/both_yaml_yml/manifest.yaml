@@ -1,0 +1,4 @@
+---
+applications:
+- name: yaml-yaml-yaml
+  memory: 256mb
