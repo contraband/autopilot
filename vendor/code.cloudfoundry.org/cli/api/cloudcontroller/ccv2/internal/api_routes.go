@@ -28,6 +28,7 @@ const (
 	GetAppRoutesRequest                                  = "GetAppRoutes"
 	GetAppStatsRequest                                   = "GetAppStats"
 	GetAppsRequest                                       = "GetApps"
+	GetConfigFeatureFlagsRequest                         = "GetConfigFeatureFlags"
 	GetInfoRequest                                       = "GetInfo"
 	GetJobRequest                                        = "GetJob"
 	GetOrganizationPrivateDomainsRequest                 = "GetOrganizationPrivateDomains"
@@ -47,6 +48,8 @@ const (
 	GetServiceInstanceRequest                            = "GetServiceInstance"
 	GetServiceInstanceServiceBindingsRequest             = "GetServiceInstanceServiceBindings"
 	GetServiceInstancesRequest                           = "GetServiceInstances"
+	GetServiceInstanceSharedFromRequest                  = "GetServiceInstanceSharedFrom"
+	GetServiceInstanceSharedToRequest                    = "GetServiceInstanceSharedTo"
 	GetServicePlanRequest                                = "GetServicePlan"
 	GetServiceRequest                                    = "GetService"
 	GetSharedDomainRequest                               = "GetSharedDomain"
@@ -68,6 +71,7 @@ const (
 	PostUserRequest                                      = "PostUser"
 	PutAppBitsRequest                                    = "PutAppBits"
 	PutAppRequest                                        = "PutApp"
+	PutDropletRequest                                    = "PutDroplet"
 	PutResourceMatch                                     = "PutResourceMatch"
 	PutRouteAppRequest                                   = "PutRouteApp"
 	PutRunningSecurityGroupSpaceRequest                  = "PutRunningSecurityGroupSpace"
@@ -82,10 +86,12 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/apps/:app_guid", Method: http.MethodGet, Name: GetAppRequest},
 	{Path: "/v2/apps/:app_guid", Method: http.MethodPut, Name: PutAppRequest},
 	{Path: "/v2/apps/:app_guid/bits", Method: http.MethodPut, Name: PutAppBitsRequest},
+	{Path: "/v2/apps/:app_guid/droplet/upload", Method: http.MethodPut, Name: PutDropletRequest},
 	{Path: "/v2/apps/:app_guid/instances", Method: http.MethodGet, Name: GetAppInstancesRequest},
 	{Path: "/v2/apps/:app_guid/restage", Method: http.MethodPost, Name: PostAppRestageRequest},
 	{Path: "/v2/apps/:app_guid/routes", Method: http.MethodGet, Name: GetAppRoutesRequest},
 	{Path: "/v2/apps/:app_guid/stats", Method: http.MethodGet, Name: GetAppStatsRequest},
+	{Path: "/v2/config/feature_flags", Method: http.MethodGet, Name: GetConfigFeatureFlagsRequest},
 	{Path: "/v2/info", Method: http.MethodGet, Name: GetInfoRequest},
 	{Path: "/v2/jobs/:job_guid", Method: http.MethodGet, Name: GetJobRequest},
 	{Path: "/v2/organizations", Method: http.MethodGet, Name: GetOrganizationsRequest},
@@ -117,6 +123,8 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_instances", Method: http.MethodGet, Name: GetServiceInstancesRequest},
 	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodGet, Name: GetServiceInstanceRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetServiceInstanceServiceBindingsRequest},
+	{Path: "/v2/service_instances/:service_instance_guid/shared_from", Method: http.MethodGet, Name: GetServiceInstanceSharedFromRequest},
+	{Path: "/v2/service_instances/:service_instance_guid/shared_to", Method: http.MethodGet, Name: GetServiceInstanceSharedToRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodGet, Name: GetServicePlanRequest},
 	{Path: "/v2/services/:service_guid", Method: http.MethodGet, Name: GetServiceRequest},
 	{Path: "/v2/shared_domains", Method: http.MethodGet, Name: GetSharedDomainsRequest},

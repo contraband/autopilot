@@ -99,6 +99,10 @@ func ConvertToTranslatableError(err error) error {
 		return SecurityGroupNotFoundError(e)
 	case actionerror.ServiceInstanceNotFoundError:
 		return ServiceInstanceNotFoundError(e)
+	case actionerror.ServiceInstanceNotSharedToSpaceError:
+		return ServiceInstanceNotSharedToSpaceError{ServiceInstanceName: e.ServiceInstanceName}
+	case actionerror.SharedServiceInstanceNotFoundError:
+		return SharedServiceInstanceNotFoundError(e)
 	case actionerror.SpaceNotFoundError:
 		return SpaceNotFoundError{Name: e.Name}
 	case actionerror.StackNotFoundError:
@@ -107,8 +111,10 @@ func ConvertToTranslatableError(err error) error {
 		return StagingTimeoutError(e)
 	case actionerror.TaskWorkersUnavailableError:
 		return RunTaskError{Message: "Task workers are unavailable."}
+	case actionerror.TCPRouteOptionsNotProvidedError:
+		return TCPRouteOptionsNotProvidedError{}
 	case actionerror.TriggerLegacyPushError:
-		return TriggerLegacyPushError{DomainRelated: e.DomainRelated, HostnameRelated: e.HostnameRelated}
+		return TriggerLegacyPushError{DomainHostRelated: e.DomainHostRelated}
 	case actionerror.UploadFailedError:
 		return UploadFailedError{Err: ConvertToTranslatableError(e.Err)}
 	case actionerror.CommandLineOptionsAndManifestConflictError:

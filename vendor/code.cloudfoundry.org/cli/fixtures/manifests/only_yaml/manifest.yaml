@@ -1,4 +1,0 @@
----
-applications:
-- name: from-default-manifest
-  memory: 256mb

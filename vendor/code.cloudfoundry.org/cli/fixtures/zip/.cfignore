@@ -1,6 +1,0 @@
-*.log
-/someDir/baz.txt
-ignoredDir
-/lastDir/*
-/fooDir/**/baz.txt
-/otherDir/
