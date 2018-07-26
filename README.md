@@ -19,7 +19,8 @@ $ cf install-plugin path/to/downloaded/binary
 ```
 $ cf zero-downtime-push application-to-replace \
     -f path/to/new_manifest.yml \
-    -p path/to/new/path
+    -p path/to/new/path \
+    [-keep-old-app]
 ```
 
 ## warning
