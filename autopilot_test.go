@@ -21,12 +21,13 @@ func TestAutopilot(t *testing.T) {
 
 var _ = Describe("Flag Parsing", func() {
 	It("parses a complete set of args", func() {
-		appName, manifestPath, appPath, showLogs, err := ParseArgs(
+		appName, manifestPath, appPath, showLogs, keepOldApp, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
 				"-f", "manifest-path",
 				"-p", "app-path",
+				"-keep-old-app",
 			},
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -35,10 +36,11 @@ var _ = Describe("Flag Parsing", func() {
 		Expect(manifestPath).To(Equal("manifest-path"))
 		Expect(appPath).To(Equal("app-path"))
 		Expect(showLogs).To(Equal(false))
+		Expect(keepOldApp).To(Equal(true))
 	})
 
 	It("requires a manifest", func() {
-		_, _, _, _, err := ParseArgs(
+		_, _, _, _, _, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",

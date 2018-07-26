@@ -35,7 +35,7 @@ func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
 }
 
-func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, showLogs bool) []rewind.Action {
+func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, showLogs bool, keepOldApp bool) []rewind.Action {
 	venName := venerableAppName(appName)
 	var err error
 	var curApp, venApp *AppEntity
@@ -114,7 +114,7 @@ func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath s
 		// delete
 		{
 			Forward: func() error {
-				if !haveVenToCleanup {
+				if !haveVenToCleanup || keepOldApp {
 					return nil
 				}
 				return appRepo.DeleteApplication(venName)
@@ -141,11 +141,11 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	}
 
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, showLogs, err := ParseArgs(args)
+	appName, manifestPath, appPath, showLogs, keepOldApp, err := ParseArgs(args)
 	fatalIf(err)
 
 	fatalIf((&rewind.Actions{
-		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, showLogs),
+		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, showLogs, keepOldApp),
 		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
 	}).Execute())
 
@@ -176,27 +176,28 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func ParseArgs(args []string) (string, string, string, bool, error) {
+func ParseArgs(args []string) (string, string, string, bool, bool, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
 	showLogs := flags.Bool("show-app-log", false, "tail and show application log during application start")
+	keepOldApp := flags.Bool("keep-old-app", false, "do not remove the old application")
 
 	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
-		return "", "", "", false, ErrNoArgs
+		return "", "", "", false, true, ErrNoArgs
 	}
 	err := flags.Parse(args[2:])
 	if err != nil {
-		return "", "", "", false, err
+		return "", "", "", false, true, err
 	}
 
 	appName := args[1]
 
 	if *manifestPath == "" {
-		return "", "", "", false, ErrNoManifest
+		return "", "", "", false, true, ErrNoManifest
 	}
 
-	return appName, *manifestPath, *appPath, *showLogs, nil
+	return appName, *manifestPath, *appPath, *showLogs, *keepOldApp, nil
 }
 
 var (
