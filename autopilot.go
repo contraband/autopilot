@@ -31,11 +31,19 @@ func main() {
 
 type AutopilotPlugin struct{}
 
+type VenerableBehavior int
+
+const (
+	Delete VenerableBehavior = iota + 1
+	Ignore
+	Stop
+)
+
 func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
 }
 
-func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, showLogs bool) []rewind.Action {
+func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, venBehavior VenerableBehavior, showLogs bool) []rewind.Action {
 	venName := venerableAppName(appName)
 	var err error
 	var curApp, venApp *AppEntity
@@ -111,13 +119,20 @@ func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath s
 				return appRepo.RenameApplication(venName, appName)
 			},
 		},
-		// delete
+		// delete, stop or ignore
 		{
 			Forward: func() error {
 				if !haveVenToCleanup {
 					return nil
 				}
-				return appRepo.DeleteApplication(venName)
+
+				switch venBehavior {
+				case Delete:
+					return appRepo.DeleteApplication(venName)
+				case Stop:
+					return appRepo.StopApplication(venName)
+				}
+				return nil
 			},
 		},
 	}
@@ -141,11 +156,11 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	}
 
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, showLogs, err := ParseArgs(args)
+	appName, manifestPath, appPath, venBehavior, showLogs, err := ParseArgs(args)
 	fatalIf(err)
 
 	fatalIf((&rewind.Actions{
-		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, showLogs),
+		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, venBehavior, showLogs),
 		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
 	}).Execute())
 
@@ -169,34 +184,44 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 				Name:     "zero-downtime-push",
 				HelpText: "Perform a zero-downtime push of an application over the top of an old one",
 				UsageDetails: plugin.Usage{
-					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
+					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path \\ \n \t-b delete|stop|ignore",
 				},
 			},
 		},
 	}
 }
 
-func ParseArgs(args []string) (string, string, string, bool, error) {
+func ParseArgs(args []string) (string, string, string, VenerableBehavior, bool, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
+	venBehaviorRaw := flags.String("b", "", "behavior regarding venerable application (delete|stop|ignore)")
 	showLogs := flags.Bool("show-app-log", false, "tail and show application log during application start")
 
 	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
-		return "", "", "", false, ErrNoArgs
+		return "", "", "", 0, false, ErrNoArgs
 	}
 	err := flags.Parse(args[2:])
 	if err != nil {
-		return "", "", "", false, err
+		return "", "", "", 0, false, err
 	}
 
 	appName := args[1]
 
 	if *manifestPath == "" {
-		return "", "", "", false, ErrNoManifest
+		return "", "", "", 0, false, ErrNoManifest
 	}
 
-	return appName, *manifestPath, *appPath, *showLogs, nil
+	//By default delete the venerable application after successful deployment
+	venBehavior := Delete
+	switch strings.ToLower(*venBehaviorRaw) {
+	case "stop":
+		venBehavior = Stop
+	case "ignore":
+		venBehavior = Ignore
+	}
+
+	return appName, *manifestPath, *appPath, venBehavior, *showLogs, nil
 }
 
 var (
@@ -278,6 +303,11 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
 	_, err := repo.conn.CliCommand("delete", appName, "-f")
+	return err
+}
+
+func (repo *ApplicationRepo) StopApplication(appName string) error {
+	_, err := repo.conn.CliCommand("stop", appName)
 	return err
 }
 
