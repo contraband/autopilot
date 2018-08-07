@@ -21,7 +21,7 @@ func TestAutopilot(t *testing.T) {
 
 var _ = Describe("Flag Parsing", func() {
 	It("parses a complete set of args", func() {
-		appName, manifestPath, appPath, showLogs, err := ParseArgs(
+		appName, manifestPath, appPath, venBehavior, showLogs, rollbackOnly, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
@@ -34,11 +34,13 @@ var _ = Describe("Flag Parsing", func() {
 		Expect(appName).To(Equal("appname"))
 		Expect(manifestPath).To(Equal("manifest-path"))
 		Expect(appPath).To(Equal("app-path"))
+		Expect(venBehavior).To(Equal(Delete))
 		Expect(showLogs).To(Equal(false))
+		Expect(rollbackOnly).To(Equal(false))
 	})
 
 	It("requires a manifest", func() {
-		_, _, _, _, err := ParseArgs(
+		_, _, _, _, _, _, err := ParseArgs(
 			[]string{
 				"zero-downtime-push",
 				"appname",
@@ -219,6 +221,46 @@ var _ = Describe("ApplicationRepo", func() {
 			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
 
 			err := repo.DeleteApplication("app-name")
+			Expect(err).To(MatchError("bad app"))
+		})
+	})
+
+	Describe("StopApplication", func() {
+		It("stops an application", func() {
+			err := repo.StopApplication("app-name")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Expect(args).To(Equal([]string{
+				"stop", "app-name",
+			}))
+		})
+
+		It("returns errors from the stop", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
+
+			err := repo.StopApplication("app-name")
+			Expect(err).To(MatchError("bad app"))
+		})
+	})
+
+	Describe("StartApplication", func() {
+		It("starts an application", func() {
+			err := repo.StartApplication("app-name")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(cliConn.CliCommandCallCount()).To(Equal(1))
+			args := cliConn.CliCommandArgsForCall(0)
+			Expect(args).To(Equal([]string{
+				"start", "app-name",
+			}))
+		})
+
+		It("returns errors from the start", func() {
+			cliConn.CliCommandReturns([]string{}, errors.New("bad app"))
+
+			err := repo.StartApplication("app-name")
 			Expect(err).To(MatchError("bad app"))
 		})
 	})

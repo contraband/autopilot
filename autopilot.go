@@ -31,11 +31,19 @@ func main() {
 
 type AutopilotPlugin struct{}
 
+type VenerableBehavior int
+
+const (
+	Delete VenerableBehavior = iota + 1
+	Ignore
+	Stop
+)
+
 func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
 }
 
-func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, showLogs bool) []rewind.Action {
+func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, venBehavior VenerableBehavior, showLogs bool) []rewind.Action {
 	venName := venerableAppName(appName)
 	var err error
 	var curApp, venApp *AppEntity
@@ -111,13 +119,20 @@ func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath s
 				return appRepo.RenameApplication(venName, appName)
 			},
 		},
-		// delete
+		// delete, stop or ignore
 		{
 			Forward: func() error {
 				if !haveVenToCleanup {
 					return nil
 				}
-				return appRepo.DeleteApplication(venName)
+
+				switch venBehavior {
+				case Delete:
+					return appRepo.DeleteApplication(venName)
+				case Stop:
+					return appRepo.StopApplication(venName)
+				}
+				return nil
 			},
 		},
 	}
@@ -134,6 +149,59 @@ func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPat
 	}
 }
 
+func getRollbackActionsForApp(appRepo *ApplicationRepo, appName string) []rewind.Action {
+	venName := venerableAppName(appName)
+	var err error
+	var curApp, venApp *AppEntity
+
+	return []rewind.Action{
+		// get info about current app
+		{
+			Forward: func() error {
+				curApp, err = appRepo.GetAppMetadata(appName)
+				if err != ErrAppNotFound {
+					return err
+				}
+				curApp = nil
+				return nil
+			},
+		},
+		// get info about ven app
+		{
+			Forward: func() error {
+				venApp, err = appRepo.GetAppMetadata(venName)
+				// Not finding the venerable app is considered an error as it prevents us from rolling back
+				return err
+			},
+		},
+		// start the ven app in case its not running
+		{
+			Forward: func() error {
+				if venApp.State != "STARTED" {
+					return appRepo.StartApplication(venName)
+				}
+				return nil
+			},
+		},
+		// remove the current app such so that next step can rename the venerable
+		{
+			Forward: func() error {
+				// If there is current app remove it so we can rename the venerable
+				if curApp != nil {
+					return appRepo.DeleteApplication(appName)
+				}
+				return nil
+			},
+		},
+		// rename the venerable app making it the current app again
+		{
+			Forward: func() error {
+				return appRepo.RenameApplication(venName, appName)
+			},
+		},
+	}
+}
+
 func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	// only handle if actually invoked, else it can't be uninstalled cleanly
 	if args[0] != "zero-downtime-push" {
@@ -141,17 +209,28 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	}
 
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, showLogs, err := ParseArgs(args)
+	appName, manifestPath, appPath, venBehavior, showLogs, rollbackOnly, err := ParseArgs(args)
 	fatalIf(err)
 
-	fatalIf((&rewind.Actions{
-		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, showLogs),
-		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
-	}).Execute())
+	if rollbackOnly == false {
+		fatalIf((&rewind.Actions{
+			Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, venBehavior, showLogs),
+			RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
+		}).Execute())
 
-	fmt.Println()
-	fmt.Println("A new version of your application has successfully been pushed!")
-	fmt.Println()
+		fmt.Println()
+		fmt.Println("A new version of your application has successfully been pushed!")
+		fmt.Println()
+	} else {
+		fatalIf((&rewind.Actions{
+			Actions:              getRollbackActionsForApp(appRepo, appName),
+			RewindFailureMessage: "Oh no. Something's gone wrong. You should check to see if everything is OK.",
+		}).Execute())
+
+		fmt.Println()
+		fmt.Println("The venerable version of your application has successfully been rolled back!")
+		fmt.Println()
+	}
 
 	_ = appRepo.ListApplications()
 }
@@ -169,34 +248,45 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 				Name:     "zero-downtime-push",
 				HelpText: "Perform a zero-downtime push of an application over the top of an old one",
 				UsageDetails: plugin.Usage{
-					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path",
+					Usage: "$ cf zero-downtime-push application-to-replace \\ \n \t-f path/to/new_manifest.yml \\ \n \t-p path/to/new/path \\ \n \t-b delete|stop|ignore \\ \n \t[rollback-only]",
 				},
 			},
 		},
 	}
 }
 
-func ParseArgs(args []string) (string, string, string, bool, error) {
+func ParseArgs(args []string) (string, string, string, VenerableBehavior, bool, bool, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
+	venBehaviorRaw := flags.String("b", "", "behavior regarding venerable application (delete|stop|ignore)")
 	showLogs := flags.Bool("show-app-log", false, "tail and show application log during application start")
+	rollbackOnly := flags.Bool("rollback-only", false, "rollback to the venerable application instead of deploying a new version")
 
 	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
-		return "", "", "", false, ErrNoArgs
+		return "", "", "", 0, false, false, ErrNoArgs
 	}
 	err := flags.Parse(args[2:])
 	if err != nil {
-		return "", "", "", false, err
+		return "", "", "", 0, false, false, err
 	}
 
 	appName := args[1]
 
 	if *manifestPath == "" {
-		return "", "", "", false, ErrNoManifest
+		return "", "", "", 0, false, false, ErrNoManifest
 	}
 
-	return appName, *manifestPath, *appPath, *showLogs, nil
+	//By default delete the venerable application after successful deployment
+	venBehavior := Delete
+	switch strings.ToLower(*venBehaviorRaw) {
+	case "stop":
+		venBehavior = Stop
+	case "ignore":
+		venBehavior = Ignore
+	}
+
+	return appName, *manifestPath, *appPath, venBehavior, *showLogs, *rollbackOnly, nil
 }
 
 var (
@@ -268,7 +358,7 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 		}()
 	}
 
-	_, err = repo.conn.CliCommand("start", appName)
+	err = repo.StartApplication(appName)
 	if err != nil {
 		return err
 	}
@@ -278,6 +368,16 @@ func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath stri
 
 func (repo *ApplicationRepo) DeleteApplication(appName string) error {
 	_, err := repo.conn.CliCommand("delete", appName, "-f")
+	return err
+}
+
+func (repo *ApplicationRepo) StopApplication(appName string) error {
+	_, err := repo.conn.CliCommand("stop", appName)
+	return err
+}
+
+func (repo *ApplicationRepo) StartApplication(appName string) error {
+	_, err := repo.conn.CliCommand("start", appName)
 	return err
 }
 
