@@ -162,7 +162,7 @@ func (AutopilotPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
-			Build: 6,
+			Build: 7,
 		},
 		Commands: []plugin.Command{
 			{
