@@ -35,7 +35,7 @@ func venerableAppName(appName string) string {
 	return fmt.Sprintf("%s-venerable", appName)
 }
 
-func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, vars []string, varsFiles []string, showLogs bool) []rewind.Action {
+func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath, stackName string, vars []string, varsFiles []string, showLogs bool) []rewind.Action {
 	venName := venerableAppName(appName)
 	var err error
 	var curApp, venApp *AppEntity
@@ -97,7 +97,7 @@ func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath s
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(appName, manifestPath, appPath, vars, varsFiles, showLogs)
+				return appRepo.PushApplication(appName, manifestPath, appPath, stackName, vars, varsFiles, showLogs)
 			},
 			ReversePrevious: func() error {
 				if !haveVenToCleanup {
@@ -123,12 +123,12 @@ func getActionsForApp(appRepo *ApplicationRepo, appName, manifestPath, appPath s
 	}
 }
 
-func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPath string, vars []string, varsFiles []string, showLogs bool) []rewind.Action {
+func getActionsForNewApp(appRepo *ApplicationRepo, appName, manifestPath, appPath, stackName string, vars []string, varsFiles []string, showLogs bool) []rewind.Action {
 	return []rewind.Action{
 		// push
 		{
 			Forward: func() error {
-				return appRepo.PushApplication(appName, manifestPath, appPath, vars, varsFiles, showLogs)
+				return appRepo.PushApplication(appName, manifestPath, appPath, stackName, vars, varsFiles, showLogs)
 			},
 		},
 	}
@@ -141,11 +141,11 @@ func (plugin AutopilotPlugin) Run(cliConnection plugin.CliConnection, args []str
 	}
 
 	appRepo := NewApplicationRepo(cliConnection)
-	appName, manifestPath, appPath, vars, varsFiles, showLogs, err := ParseArgs(args)
+	appName, manifestPath, appPath, stackName, vars, varsFiles, showLogs, err := ParseArgs(args)
 	fatalIf(err)
 
 	fatalIf((&rewind.Actions{
-		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, vars, varsFiles, showLogs),
+		Actions:              getActionsForApp(appRepo, appName, manifestPath, appPath, stackName, vars, varsFiles, showLogs),
 		RewindFailureMessage: "Oh no. Something's gone wrong. I've tried to roll back but you should check to see if everything is OK.",
 	}).Execute())
 
@@ -187,7 +187,7 @@ func (s *StringSlice) Set(value string) error {
 	return nil
 }
 
-func ParseArgs(args []string) (string, string, string, []string, []string, bool, error) {
+func ParseArgs(args []string) (string, string, string, string, []string, []string, bool, error) {
 	flags := flag.NewFlagSet("zero-downtime-push", flag.ContinueOnError)
 
 	var vars StringSlice
@@ -195,25 +195,26 @@ func ParseArgs(args []string) (string, string, string, []string, []string, bool,
 
 	manifestPath := flags.String("f", "", "path to an application manifest")
 	appPath := flags.String("p", "", "path to application files")
+	stackName := flags.String("s", "", "name of the stack to use")
 	showLogs := flags.Bool("show-app-log", false, "tail and show application log during application start")
 	flags.Var(&vars, "var", "Variable key value pair for variable substitution, (e.g., name=app1); can specify multiple times")
 	flags.Var(&varsFiles, "vars-file", "Path to a variable substitution file for manifest; can specify multiple times")
 
 	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
-		return "", "", "", []string{}, []string{}, false, ErrNoArgs
+		return "", "", "", "", []string{}, []string{}, false, ErrNoArgs
 	}
 	err := flags.Parse(args[2:])
 	if err != nil {
-		return "", "", "", []string{}, []string{}, false, err
+		return "", "", "", "", []string{}, []string{}, false, err
 	}
 
 	appName := args[1]
 
 	if *manifestPath == "" {
-		return "", "", "", []string{}, []string{}, false, ErrNoManifest
+		return "", "", "", "", []string{}, []string{}, false, ErrNoManifest
 	}
 
-	return appName, *manifestPath, *appPath, vars, varsFiles, *showLogs, nil
+	return appName, *manifestPath, *appPath, *stackName, vars, varsFiles, *showLogs, nil
 }
 
 var (
@@ -236,11 +237,15 @@ func (repo *ApplicationRepo) RenameApplication(oldName, newName string) error {
 	return err
 }
 
-func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath string, vars []string, varsFiles []string, showLogs bool) error {
+func (repo *ApplicationRepo) PushApplication(appName, manifestPath, appPath, stackName string, vars []string, varsFiles []string, showLogs bool) error {
 	args := []string{"push", appName, "-f", manifestPath, "--no-start"}
 
 	if appPath != "" {
 		args = append(args, "-p", appPath)
+	}
+
+	if stackName != "" {
+		args = append(args, "-s", stackName)
 	}
 
 	for _, varPair := range vars {
