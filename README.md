@@ -2,8 +2,6 @@
 
 *cf plugin for hands-off, zero downtime application deploys*
 
-![Autopilot](http://i.imgur.com/xj2vbwk.jpg)
-
 ## notice
 
 **This plugin is now archived and will not recieve any further changes. I haven't had
