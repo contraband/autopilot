@@ -4,6 +4,19 @@
 
 ![Autopilot](http://i.imgur.com/xj2vbwk.jpg)
 
+## notice
+
+**This plugin is now archived and will not recieve any further changes. I haven't had
+time to properly maintain it for a long time and I'd rather archive it than have it
+limp on under false pretenses.**
+
+Thank you for your contributions over the past few years.
+    
+This plugin is still used in the Concourse [cf-resource][cf-resource] and will be
+merged into that if changes need to be made in the future.
+
+[cf-resource]: https://github.com/concourse/cf-resource
+
 ## installation
 
 Download the latest version from the [releases][releases] page and make it executable.
